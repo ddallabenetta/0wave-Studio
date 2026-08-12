@@ -14,12 +14,12 @@ import { Button, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
-import { createSynthSound } from "@/lib/schema/factories";
 import { SynthEditor } from "./SynthEditor";
 import { SampleEditor } from "./SampleEditor";
 import { RecordPanel } from "./RecordPanel";
 import { ImportPanel } from "./ImportPanel";
 import { SoundLibraryPanel } from "./SoundLibraryPanel";
+import { NewSoundDialog } from "./NewSoundDialog";
 import { Analyzer } from "./Analyzer";
 import { Keyboard } from "./Keyboard";
 import { strings } from "@/i18n";
@@ -51,13 +51,14 @@ export function StudioRoot() {
 
   const sounds = useProjectStore((s) => s.project.sounds);
   const tracks = useProjectStore((s) => s.project.tracks);
-  const addSound = useProjectStore((s) => s.addSound);
   const duplicateSound = useProjectStore((s) => s.duplicateSound);
   const renameSound = useProjectStore((s) => s.renameSound);
   const engineRef = useEngineRef();
 
   const sound = sounds.find((s) => s.id === editingSoundId);
   const inUse = Boolean(sound && tracks.some((t) => t.soundId === sound.id));
+  const setNewSoundDialogOpen = useUiStore((s) => s.setNewSoundDialogOpen);
+  const newSoundDialogOpen = useUiStore((s) => s.newSoundDialogOpen);
 
   /* Select a sound on first paint so the editor is never empty. */
   useEffect(() => {
@@ -65,6 +66,28 @@ export function StudioRoot() {
     const first = sounds[0];
     if (first) setEditingSoundId(first.id);
   }, [editingSoundId, sounds, setEditingSoundId]);
+
+  /* Space bar previews the edited sound. */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const el = event.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+      const engine = engineRef.current;
+      if (!engine || useUiStore.getState().audioStatus !== "running") return;
+      const current = useProjectStore
+        .getState()
+        .project.sounds.find((s) => s.id === editingSoundId);
+      if (!current) return;
+      event.preventDefault();
+      engine.noteOn(60, 100);
+      window.setTimeout(() => engine.noteOff(60), 700);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editingSoundId, engineRef]);
 
   /* Keep the engine's active patch in sync with the edited sound.
    * Only the identity of the sound triggers a reload: a full reload calls
@@ -104,17 +127,8 @@ export function StudioRoot() {
               className="material-sunken w-48 rounded-[var(--radius-control)] px-2 py-1 text-xs text-ink outline-none"
             />
           )}
-          <Button
-            size="sm"
-            onClick={() => {
-              const created = createSynthSound(strings.studio.initPatch);
-              addSound(created);
-              setEditingSoundId(created.id);
-              setMode("synth");
-              engineRef.current?.loadSound(created);
-            }}
-          >
-            {strings.studio.initPatch}
+          <Button size="sm" onClick={() => setNewSoundDialogOpen(true)}>
+            {strings.studio.newSound}
           </Button>
           {sound && (
             <Button
@@ -165,6 +179,8 @@ export function StudioRoot() {
           <Analyzer />
         </aside>
       </div>
+
+      <NewSoundDialog open={newSoundDialogOpen} onClose={() => setNewSoundDialogOpen(false)} />
     </div>
   );
 }

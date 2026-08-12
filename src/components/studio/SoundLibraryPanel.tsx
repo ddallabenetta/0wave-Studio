@@ -11,7 +11,6 @@ import { Button, IconButton, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
-import { createSynthSound } from "@/lib/schema/factories";
 import { loadSampleBuffer } from "./sampleBuffers";
 import { Panel } from "./Panel";
 import { strings } from "@/i18n";
@@ -29,7 +28,6 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
   const router = useRouter();
   const sounds = useProjectStore((s) => s.project.sounds);
   const assets = useProjectStore((s) => s.project.assets);
-  const addSound = useProjectStore((s) => s.addSound);
   const duplicateSound = useProjectStore((s) => s.duplicateSound);
   const renameSound = useProjectStore((s) => s.renameSound);
   const deleteSound = useProjectStore((s) => s.deleteSound);
@@ -37,6 +35,7 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
   const setEditingSoundId = useUiStore((s) => s.setEditingSoundId);
   const setStudioMode = useUiStore((s) => s.setStudioMode);
   const setPendingPlaygroundSound = useUiStore((s) => s.setPendingPlaygroundSound);
+  const setNewSoundDialogOpen = useUiStore((s) => s.setNewSoundDialogOpen);
   const engineRef = useEngineRef();
 
   const [query, setQuery] = useState("");
@@ -89,15 +88,7 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
       title={strings.library.title}
       className={variant === "full" ? "m-3" : "h-full"}
       actions={
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            const sound = createSynthSound(strings.studio.initPatch);
-            addSound(sound);
-            select(sound);
-          }}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setNewSoundDialogOpen(true)}>
           {strings.library.newSound}
         </Button>
       }

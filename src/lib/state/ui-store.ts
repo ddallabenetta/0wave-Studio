@@ -43,6 +43,9 @@ interface UiStoreState {
   /** Notes currently held (for on-screen indicator). */
   activeNotes: number[];
   setActiveNotes(notes: number[]): void;
+  /** Guided preset picker shown when creating a new sound. */
+  newSoundDialogOpen: boolean;
+  setNewSoundDialogOpen(open: boolean): void;
 
   /* Playground */
   selection: Selection;
@@ -87,6 +90,8 @@ export const useUiStore = create<UiStoreState>()((set) => ({
     set((s) => ({ keyboardOctave: Math.min(3, Math.max(-3, s.keyboardOctave + delta)) })),
   activeNotes: [],
   setActiveNotes: (activeNotes) => set({ activeNotes }),
+  newSoundDialogOpen: false,
+  setNewSoundDialogOpen: (newSoundDialogOpen) => set({ newSoundDialogOpen }),
 
   selection: null,
   setSelection: (selection) => set({ selection }),

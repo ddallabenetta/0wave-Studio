@@ -12,6 +12,8 @@
 import { Knob, SegmentedControl, Toggle } from "@/components/controls";
 import { Panel, ControlRow } from "./Panel";
 import { EffectsSection } from "./EffectsSection";
+import { BasicSynthPanel } from "./BasicSynthPanel";
+import { WaveformPreview } from "./WaveformPreview";
 import { useSynthBinding } from "./useSynthBinding";
 import { useUiStore } from "@/lib/state/ui-store";
 import { strings } from "@/i18n";
@@ -152,58 +154,21 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
     );
   }
 
-  const reverbMix = state.effects[3].kind === "reverb" ? state.effects[3].params.mix : 0;
+  if (!advanced) {
+    return (
+      <div className="flex flex-col gap-3 overflow-y-auto p-3">
+        <Panel title={strings.studio.sections.preview}>
+          <div className="p-3">
+            <WaveformPreview state={state} />
+          </div>
+        </Panel>
+        <BasicSynthPanel soundId={soundId} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 overflow-y-auto p-3">
-      {!advanced && (
-        <Panel title="Macro">
-          <ControlRow className="p-3">
-            <Knob
-              label={strings.studio.macros.brightness}
-              value={state.filter.cutoff}
-              min={20}
-              max={20000}
-              logarithmic
-              defaultValue={8000}
-              unit="Hz"
-              format={hz}
-              onChange={(v) => set("filter.cutoff", v)}
-            />
-            <Knob
-              label={strings.studio.macros.movement}
-              value={state.lfo.depth}
-              min={0}
-              max={1}
-              defaultValue={0}
-              onChange={(v) => set("lfo.depth", v)}
-            />
-            <Knob
-              label={strings.studio.macros.punch}
-              value={state.ampEnvelope.attack}
-              min={0.001}
-              max={2}
-              logarithmic
-              defaultValue={0.005}
-              unit="ms"
-              format={secs}
-              onChange={(v) => set("ampEnvelope.attack", v)}
-            />
-            <Knob
-              label={strings.studio.macros.space}
-              value={reverbMix}
-              min={0}
-              max={1}
-              defaultValue={0.25}
-              onChange={(v) => {
-                set("effects.3.params.mix", v);
-                if (v > 0) set("effects.3.bypass", false);
-              }}
-            />
-          </ControlRow>
-        </Panel>
-      )}
-
       <Panel title={strings.studio.sections.source}>
         <div className="flex flex-col gap-3 p-3">
           <OscillatorControls osc={state.osc1} prefix="osc1" set={set} advanced={advanced} />

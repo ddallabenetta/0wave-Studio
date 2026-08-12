@@ -29,6 +29,12 @@ export type { DisplayProps } from "./Display";
 export { LedMeter } from "./LedMeter";
 export type { LedMeterProps } from "./LedMeter";
 
+export { Pad2D } from "./Pad2D";
+export type { Pad2DProps, Pad2DPoint } from "./Pad2D";
+
+export { Slider } from "./Slider";
+export type { SliderProps } from "./Slider";
+
 // Shared interaction primitives, reused across the controls above.
 export {
   useDragSession,
