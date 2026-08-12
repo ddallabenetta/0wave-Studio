@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 import { exportProject, importProject } from "@/lib/persistence/transfer";
 import { useProjectStore } from "@/lib/state/project-store";
 import { AudioStatusPill } from "./AudioStatusPill";
+import { ThemeMenu } from "./ThemeMenu";
 import { strings } from "@/i18n";
 
 const NAV = [
@@ -131,6 +132,7 @@ export function TopBar() {
             {importError}
           </span>
         )}
+        <ThemeMenu />
         <AudioStatusPill />
       </div>
     </header>

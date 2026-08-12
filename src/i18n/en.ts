@@ -245,6 +245,12 @@ export const en = {
     quotaError: "Local storage is full. Export your project to free space.",
     loadFailed: "The saved project could not be loaded. A new project was created.",
   },
+  theme: {
+    label: "Theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+  },
   keyboard: {
     octaveDown: "Z: octave down",
     octaveUp: "X: octave up",

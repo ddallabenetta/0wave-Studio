@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/shell/ThemeProvider";
+import { THEME_STORAGE_KEY } from "@/lib/state/theme-store";
 import "./globals.css";
+
+/**
+ * Runs before hydration so a forced theme never flashes the wrong palette.
+ * "system" (the default) is resolved by CSS and needs no attribute.
+ */
+const themeScript = `(function(){try{var t=localStorage.getItem(${JSON.stringify(
+  THEME_STORAGE_KEY,
+)});document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:"system";}catch(e){document.documentElement.dataset.theme="system";}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,8 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

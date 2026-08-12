@@ -8,6 +8,8 @@
  */
 
 :root {
+  color-scheme: light;
+
   /* Base materials */
   --base: #f4f4f2;          /* cold off-white page background */
   --surface: #e9e9e6;       /* light grey panel */
@@ -71,6 +73,121 @@
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/*
+ * Dark theme.
+ *
+ * The same token set flips to a dark palette in two cases:
+ *  1. the OS prefers dark and the user has not forced light (this is the
+ *     "system" default, resolved purely in CSS so it reacts to OS changes
+ *     live with zero JS), and
+ *  2. the user forces dark from the Top Bar toggle.
+ * ThemeProvider sets data-theme="light" | "dark" | "system" on <html>; the
+ * attribute is written before first paint by the inline script in
+ * layout.tsx, so a forced theme never flashes the wrong palette.
+ *
+ * Direction is preserved from light: cold neutrals, one signal-orange
+ * accent, near-black recessed displays. The accent steps brighter and its
+ * foreground flips to dark so the fill keeps ~6:1 contrast; track colours
+ * lift a step so they read on the darker base.
+ */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --base: #141417;          /* near-black cold page background */
+  --surface: #1c1c20;       /* panel */
+  --surface-raised: #242429;/* raised control surface */
+  --surface-sunken: #0f0f12;/* recessed display / grid background */
+  --edge: #303037;          /* hairline borders */
+  --edge-strong: #43434c;
+
+  --ink: #e8e6df;           /* warm paper */
+  --ink-soft: #b2b0a8;
+  --ink-faint: #7d7d75;
+  --ink-inverse: #141417;
+
+  --accent: #ff6a2b;
+  --accent-hover: #ff5a16;
+  --accent-pressed: #e64e0d;
+  --accent-ink: #ff8a4d;    /* accent text on dark surfaces */
+  --accent-glow: #ff8f5a;
+  --accent-on: #1a0d05;     /* text/icons on the brighter accent */
+  --accent-wash: rgba(255, 106, 43, 0.16);
+
+  --record: #ff3b5c;
+  --error: #ff5f56;
+  --warning: #ffb020;
+  --success: #4cc38a;
+
+  /* Display material drops below the page base so it still reads recessed. */
+  --display: #0b0b0e;
+  --display-ink: #e8e6df;
+  --display-trace: #ff6a2b;
+  --display-grid: #34343a;
+
+  --track-1: #ff6a2b;
+  --track-2: #5c9cd0;
+  --track-3: #94ab5e;
+  --track-4: #c07bb8;
+  --track-5: #d99a52;
+  --track-6: #6fada8;
+  --track-7: #a797c9;
+  --track-8: #cc7070;
+
+  --bevel-light: rgba(255, 255, 255, 0.08);
+  --bevel-dark: rgba(0, 0, 0, 0.42);
+  --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --base: #141417;
+    --surface: #1c1c20;
+    --surface-raised: #242429;
+    --surface-sunken: #0f0f12;
+    --edge: #303037;
+    --edge-strong: #43434c;
+
+    --ink: #e8e6df;
+    --ink-soft: #b2b0a8;
+    --ink-faint: #7d7d75;
+    --ink-inverse: #141417;
+
+    --accent: #ff6a2b;
+    --accent-hover: #ff5a16;
+    --accent-pressed: #e64e0d;
+    --accent-ink: #ff8a4d;
+    --accent-glow: #ff8f5a;
+    --accent-on: #1a0d05;
+    --accent-wash: rgba(255, 106, 43, 0.16);
+
+    --record: #ff3b5c;
+    --error: #ff5f56;
+    --warning: #ffb020;
+    --success: #4cc38a;
+
+    --display: #0b0b0e;
+    --display-ink: #e8e6df;
+    --display-trace: #ff6a2b;
+    --display-grid: #34343a;
+
+    --track-1: #ff6a2b;
+    --track-2: #5c9cd0;
+    --track-3: #94ab5e;
+    --track-4: #c07bb8;
+    --track-5: #d99a52;
+    --track-6: #6fada8;
+    --track-7: #a797c9;
+    --track-8: #cc7070;
+
+    --bevel-light: rgba(255, 255, 255, 0.08);
+    --bevel-dark: rgba(0, 0, 0, 0.42);
+    --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.22);
+  }
 }
 
 @theme inline {

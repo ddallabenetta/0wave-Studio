@@ -251,6 +251,12 @@ export const it: typeof en = {
     quotaError: "Spazio di archiviazione esaurito. Esporta il progetto per liberare spazio.",
     loadFailed: "Impossibile caricare il progetto salvato. Ne è stato creato uno nuovo.",
   },
+  theme: {
+    label: "Tema",
+    light: "Chiaro",
+    dark: "Scuro",
+    system: "Sistema",
+  },
   keyboard: {
     octaveDown: "Z: ottava giù",
     octaveUp: "X: ottava su",
