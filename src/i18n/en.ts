@@ -252,8 +252,9 @@ export const en = {
     system: "System",
   },
   keyboard: {
-    octaveDown: "Z: octave down",
-    octaveUp: "X: octave up",
+    octaveDown: "K: octave down",
+    octaveUp: "L: octave up",
+    keymap: "Keymap",
   },
   common: {
     cancel: "Cancel",

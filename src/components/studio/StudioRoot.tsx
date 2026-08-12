@@ -151,7 +151,7 @@ export function StudioRoot() {
         )}
 
         <div className="flex min-h-0 flex-1 flex-col bg-base">
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {mode === "synth" && <SynthEditor soundId={editingSoundId} />}
             {mode === "sample" && <SampleEditor soundId={editingSoundId} />}
             {mode === "record" && <RecordPanel />}
@@ -161,7 +161,7 @@ export function StudioRoot() {
           {showKeyboard && <Keyboard />}
         </div>
 
-        <aside className="w-[300px] shrink-0 overflow-y-auto border-l border-edge bg-base p-2">
+        <aside className="w-[300px] shrink-0 overflow-hidden border-l border-edge bg-base p-2">
           <Analyzer />
         </aside>
       </div>

@@ -258,8 +258,9 @@ export const it: typeof en = {
     system: "Sistema",
   },
   keyboard: {
-    octaveDown: "Z: ottava giù",
-    octaveUp: "X: ottava su",
+    octaveDown: "K: ottava giù",
+    octaveUp: "L: ottava su",
+    keymap: "Mappa tastiera",
   },
   common: {
     cancel: "Annulla",
