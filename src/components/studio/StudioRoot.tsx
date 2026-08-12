@@ -66,13 +66,18 @@ export function StudioRoot() {
     if (first) setEditingSoundId(first.id);
   }, [editingSoundId, sounds, setEditingSoundId]);
 
-  /* Keep the engine's active patch in sync with the edited sound. */
+  /* Keep the engine's active patch in sync with the edited sound.
+   * Only the identity of the sound triggers a reload: a full reload calls
+   * allNotesOff, so depending on the sound object itself would cut every held
+   * note on each knob turn. Live tweaks go through setParameter instead, so
+   * the current state is read imperatively here. */
   useEffect(() => {
-    if (!sound || audioStatus !== "running") return;
-    engineRef.current?.loadSound(sound);
-    // Only reload when the identity of the sound changes; live parameter
-    // tweaks go through setParameter, not a full reload.
-  }, [sound?.id, audioStatus, engineRef, sound]);
+    if (!editingSoundId || audioStatus !== "running") return;
+    const current = useProjectStore
+      .getState()
+      .project.sounds.find((s) => s.id === editingSoundId);
+    if (current) engineRef.current?.loadSound(current);
+  }, [editingSoundId, audioStatus, engineRef]);
 
   const showKeyboard = mode === "synth" || mode === "sample";
 

@@ -496,11 +496,17 @@ export class SynthEngine {
     for (let i = 0; i < 8; i++) this.slots.push({ voice: null });
   }
 
+  /**
+   * Assign the patch this engine plays. The state arrives from the project
+   * store, which is immutable (immer freezes every document it produces), so
+   * the engine takes its own mutable copy: setParameter writes straight into
+   * `this.patch` at audio rate and must never touch store-owned objects.
+   */
   loadPatch(state: SynthState): void {
     this.allNotesOff();
-    this.patch = state;
-    this.effects.update(state.effects);
-    this.outputGain.gain.value = state.output.gain;
+    this.patch = structuredClone(state);
+    this.effects.update(this.patch.effects);
+    this.outputGain.gain.value = this.patch.output.gain;
   }
 
   noteOn(note: number, velocity: number, time?: number): void {

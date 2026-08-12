@@ -157,8 +157,22 @@
       var(--shadow-ambient);
   }
 
-  /* Pressed state: control physically lowers 1-2px. */
-  .material-raised:active,
+  /* Pressed state: control physically lowers 1-2px.
+   * Only genuinely interactive surfaces press. Panels, cards and dialogs
+   * share the same raised material but must not react to a click landing
+   * anywhere inside them, so the :active rule is gated on interactive
+   * elements; non-native controls (knob cap, fader thumb) opt in via
+   * data-pressed. */
+  .material-raised:is(
+      button,
+      a,
+      summary,
+      [role="button"],
+      [role="switch"],
+      [role="radio"],
+      [role="tab"],
+      [role="option"]
+    ):not(:disabled):not([aria-disabled="true"]):active,
   .material-raised[data-pressed="true"] {
     transform: translateY(1px);
     box-shadow:

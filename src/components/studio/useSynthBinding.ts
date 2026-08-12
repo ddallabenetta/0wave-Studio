@@ -71,17 +71,20 @@ export interface SampleBinding {
 }
 
 /**
- * Sample edits are non-destructive parameter writes. The engine reads the
- * current SampleState on each playSample call, so the store is the only
- * write target here.
+ * Sample edits are non-destructive parameter writes. They follow the same
+ * two-target rule as synth edits: the engine holds its own mutable copy of the
+ * SampleState for playback, so it has to hear about every change, and the
+ * store keeps the persisted version.
  */
 export function useSampleBinding(soundId: ID | null): SampleBinding {
   const sound = useProjectStore((s) => s.project.sounds.find((x) => x.id === soundId));
   const updateSound = useProjectStore((s) => s.updateSound);
+  const engineRef = useEngineRef();
 
   const set = useCallback(
     (path: string, value: Primitive) => {
       if (!soundId) return;
+      engineRef.current?.setParameter(path, value);
       updateSound(
         soundId,
         (draft) => {
@@ -90,7 +93,7 @@ export function useSampleBinding(soundId: ID | null): SampleBinding {
         { undoable: false },
       );
     },
-    [soundId, updateSound],
+    [soundId, updateSound, engineRef],
   );
 
   return { sound, state: sound?.sampleState, set };

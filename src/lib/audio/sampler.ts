@@ -70,18 +70,22 @@ export class SamplerEngine {
     this.output.connect(destination);
   }
 
-  /** Assign the sound this engine plays (used by the preview and per-track instances). */
+  /**
+   * Assign the sound this engine plays (used by the preview and per-track
+   * instances). The state comes from the frozen project document, so the
+   * engine clones it: setParameter mutates `this.state` directly.
+   */
   loadSound(sound: SoundDefinition): void {
     this.stopAll();
     this.sound = sound;
-    this.state = sound.sampleState ?? null;
+    this.state = sound.sampleState ? structuredClone(sound.sampleState) : null;
     if (this.state) this.effects.update(this.state.effects);
   }
 
   loadState(state: SampleState): void {
     this.stopAll();
-    this.state = state;
-    this.effects.update(state.effects);
+    this.state = structuredClone(state);
+    this.effects.update(this.state.effects);
   }
 
   /** Immediate sample playback (preview / clips). */
