@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Microphone, Record as RecordIcon, Stop, Pause, Play, Trash } from "@phosphor-icons/react";
 import { Button, LedMeter } from "@/components/controls";
 import { useEngineRef, useAnimationFrame } from "@/components/hooks/useEngine";
+import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { Panel } from "./Panel";
 import { decodeUpload, saveSampleSound } from "./saveSampleSound";
@@ -164,9 +165,27 @@ export function RecordPanel() {
     setStudioMode("sample");
   };
 
+  /* Recording is a temporary state, not a place: leaving it goes back to
+     whichever sound is open. */
+  const close = () => {
+    teardown();
+    const current = useProjectStore
+      .getState()
+      .project.sounds.find((s) => s.id === useUiStore.getState().editingSoundId);
+    setStudioMode(current?.type === "sample" ? "sample" : "synth");
+  };
+
   return (
     <div className="p-3">
-      <Panel title={strings.record.title}>
+      <Panel
+        title={strings.record.title}
+        hint={strings.studio.modeHints.record}
+        actions={
+          <Button size="sm" variant="ghost" onClick={close}>
+            {strings.common.close}
+          </Button>
+        }
+      >
         <div className="flex flex-col gap-4 p-4">
           {!supported && <p className="text-sm text-error">{strings.record.notSupported}</p>}
           {error && (

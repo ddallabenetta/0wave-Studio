@@ -36,6 +36,12 @@ volume, pan, mute, solo, colour token, reorder, duplicate, delete, and
 `Edit in Studio`. Solo mutes every non-soloed track. Colours come from eight
 controlled tokens, not arbitrary values.
 
+A track row and its timeline lane are the same object seen twice, so they are
+kept on the same line: both take their geometry from `playground/layout.ts`
+(one row height, one ruler height — the track list carries a spacer where the
+timeline carries its sticky bar ruler), and the two scrollers mirror each
+other's vertical position.
+
 ## Timeline
 
 Bar grid with configurable snap (1 bar, 1/4, 1/8, 1/16) and zoom. Clips are

@@ -5,7 +5,12 @@ import { create } from "zustand";
 import type { ID } from "../schema/types";
 import type { AudioEngineStatus } from "../schema/types";
 
-export type StudioMode = "synth" | "record" | "import" | "sample" | "library";
+/**
+ * What the Studio's central view is showing. It is not a mode *bar*: synth
+ * and sample follow the selected sound, while record and import are entered
+ * from the library's "+" and left as soon as the new sound is saved.
+ */
+export type StudioMode = "synth" | "record" | "import" | "sample";
 export type PlaygroundEditor = "pattern" | "piano-roll" | "clip";
 export type Complexity = "basic" | "advanced";
 export type BottomPanel = "editor" | "closed";

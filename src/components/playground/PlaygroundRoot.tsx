@@ -55,6 +55,17 @@ export function PlaygroundRoot() {
   const addTrack = useProjectStore((s) => s.addTrack);
 
   const [pixelsPerBeat, setPixelsPerBeat] = useState(32);
+
+  /* Track rows and timeline lanes are two scrollers showing one thing, so
+     each mirrors the other's vertical position. The equality check is what
+     stops the mirroring from bouncing back and forth. */
+  const trackScrollRef = useRef<HTMLUListElement | null>(null);
+  const laneScrollRef = useRef<HTMLDivElement | null>(null);
+  const mirrorScroll = (from: HTMLElement | null, to: HTMLElement | null) => {
+    if (!from || !to || to.scrollTop === from.scrollTop) return;
+    to.scrollTop = from.scrollTop;
+  };
+
   /** Confirmation shown after the starter loop is built, then retired. */
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<number | null>(null);
@@ -159,16 +170,24 @@ export function PlaygroundRoot() {
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="w-[420px] shrink-0">
-          <TrackList />
+          <TrackList
+            scrollRef={trackScrollRef}
+            onScroll={() => mirrorScroll(trackScrollRef.current, laneScrollRef.current)}
+          />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <Timeline pixelsPerBeat={pixelsPerBeat} onZoom={setPixelsPerBeat} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Timeline
+            pixelsPerBeat={pixelsPerBeat}
+            onZoom={setPixelsPerBeat}
+            scrollRef={laneScrollRef}
+            onScroll={() => mirrorScroll(laneScrollRef.current, trackScrollRef.current)}
+          />
 
           <div className="shrink-0 border-t border-edge bg-surface">
-            <div className="flex items-center gap-2 px-3 py-1.5">
+            <div className="flex items-center gap-2 overflow-x-auto px-3 py-1.5">
               <SegmentedControl
                 label="Editor"
                 options={EDITORS}

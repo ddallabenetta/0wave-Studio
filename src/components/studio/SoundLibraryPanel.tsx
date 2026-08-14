@@ -1,13 +1,33 @@
 "use client";
 
 /**
- * Sound library: the Studio's internal browser for every sound in the
- * project. Also reachable full width as the "library" Studio mode.
+ * Sound library: the Studio's browser for every sound in the project, and
+ * the entry point for creating new ones. Also mounted in the Playground's
+ * right panel.
+ *
+ * A row is one click target: the whole row selects the sound, not just its
+ * name. Everything a single sound can do beyond that — rename, duplicate,
+ * send to the Playground, delete — lives in the row's own menu, and the "+"
+ * at the foot of the list asks which kind of sound is being added (built,
+ * recorded, or imported).
  */
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MagnifyingGlass, Play, ArrowRight, Copy, PencilSimple, Trash } from "@phosphor-icons/react";
-import { Button, IconButton, SegmentedControl } from "@/components/controls";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  MagnifyingGlass,
+  Play,
+  Plus,
+  ArrowRight,
+  Copy,
+  DotsThreeVertical,
+  FileArrowUp,
+  Microphone,
+  PencilSimple,
+  Trash,
+  WaveSine,
+} from "@phosphor-icons/react";
+import { Button, IconButton, MenuButton, SegmentedControl } from "@/components/controls";
+import type { MenuAction } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
@@ -16,6 +36,7 @@ import { Panel } from "./Panel";
 import { PresetSparkline } from "./PresetSparkline";
 import { strings } from "@/i18n";
 import type { SoundDefinition } from "@/lib/schema/types";
+import type { StudioMode } from "@/lib/state/ui-store";
 
 type Filter = "all" | "synth" | "sample";
 
@@ -25,13 +46,15 @@ const FILTERS = [
   { value: "sample" as const, label: strings.library.filterSample },
 ];
 
-export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "full" }) {
+export function SoundLibraryPanel() {
   const router = useRouter();
+  const pathname = usePathname();
   const sounds = useProjectStore((s) => s.project.sounds);
   const assets = useProjectStore((s) => s.project.assets);
   const duplicateSound = useProjectStore((s) => s.duplicateSound);
   const renameSound = useProjectStore((s) => s.renameSound);
   const deleteSound = useProjectStore((s) => s.deleteSound);
+  const tracks = useProjectStore((s) => s.project.tracks);
   const editingSoundId = useUiStore((s) => s.editingSoundId);
   const setEditingSoundId = useUiStore((s) => s.setEditingSoundId);
   const setStudioMode = useUiStore((s) => s.setStudioMode);
@@ -78,21 +101,85 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
     router.push("/playground");
   };
 
+  /** Capture and import happen in the Studio's central view. */
+  const openInStudio = (mode: StudioMode) => {
+    setStudioMode(mode);
+    if (pathname !== "/studio") router.push("/studio");
+  };
+
   const durationFor = (sound: SoundDefinition) => {
     if (sound.type !== "sample") return null;
     const asset = assets.find((a) => a.id === sound.sampleState?.assetId);
     return asset ? `${asset.duration.toFixed(2)}s` : null;
   };
 
+  const addActions: MenuAction[] = [
+    {
+      id: "synth",
+      label: strings.library.addSound,
+      icon: <WaveSine size={14} aria-hidden />,
+      onSelect: () => setNewSoundDialogOpen(true),
+    },
+    {
+      id: "record",
+      label: strings.library.addRecording,
+      icon: <Microphone size={14} aria-hidden />,
+      onSelect: () => openInStudio("record"),
+    },
+    {
+      id: "import",
+      label: strings.library.addSample,
+      icon: <FileArrowUp size={14} aria-hidden />,
+      onSelect: () => openInStudio("import"),
+    },
+  ];
+
+  const actionsFor = (sound: SoundDefinition): MenuAction[] => {
+    const inUse = tracks.some((t) => t.soundId === sound.id);
+    return [
+      {
+        id: "rename",
+        label: strings.library.rename,
+        icon: <PencilSimple size={14} aria-hidden />,
+        onSelect: () => setRenamingId(sound.id),
+      },
+      {
+        id: "duplicate",
+        // A sound used by a track is shared, not copied (ADR-005): the copy
+        // is how you edit it without changing that track.
+        label: inUse ? strings.studio.duplicateBeforeEditing : strings.library.duplicate,
+        title: inUse ? strings.studio.duplicateBeforeEditingHint : undefined,
+        icon: <Copy size={14} aria-hidden />,
+        onSelect: () => {
+          const id = duplicateSound(sound.id);
+          if (id) setEditingSoundId(id);
+        },
+      },
+      {
+        id: "playground",
+        label: strings.studio.useInPlayground,
+        icon: <ArrowRight size={14} aria-hidden />,
+        onSelect: () => sendToPlayground(sound),
+      },
+      {
+        id: "delete",
+        label: strings.library.delete,
+        icon: <Trash size={14} aria-hidden />,
+        danger: true,
+        onSelect: () => {
+          if (window.confirm(`${strings.library.delete}: ${sound.name}`)) {
+            deleteSound(sound.id);
+            if (editingSoundId === sound.id) setEditingSoundId(null);
+          }
+        },
+      },
+    ];
+  };
+
   return (
     <Panel
       title={strings.library.title}
-      className={variant === "full" ? "m-3" : "h-full"}
-      actions={
-        <Button size="sm" variant="ghost" onClick={() => setNewSoundDialogOpen(true)}>
-          {strings.library.newSound}
-        </Button>
-      }
+      className="h-full"
       contentClassName="flex flex-col"
     >
       <div className="flex flex-col gap-2 border-b border-edge p-2">
@@ -126,6 +213,7 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
         )}
         {visible.map((sound) => {
           const active = sound.id === editingSoundId;
+          const renaming = renamingId === sound.id;
           return (
             <li
               key={sound.id}
@@ -133,105 +221,102 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
                 active ? "bg-accent-wash" : "hover:bg-surface-raised/50"
               }`}
             >
-              {/* Accent spine on the open sound: readable at a glance down a
-                  long list, and not carried by colour alone (the row is also
-                  washed and its name is marked aria-current). */}
-              <span
-                aria-hidden
-                className="motion-ui absolute inset-y-1 left-0 w-[3px] rounded-full bg-accent"
-                style={{ opacity: active ? 1 : 0, transform: active ? "none" : "scaleY(0.3)" }}
-              />
-              <div className="flex items-center gap-1.5">
-                {/* Thumbnail of the patch itself, so the list can be scanned
-                    by shape as well as by name. */}
-                {sound.type === "synth" && sound.synthState && (
-                  <PresetSparkline
-                    state={sound.synthState}
-                    active={active}
-                    className="h-6 w-9 shrink-0"
-                  />
-                )}
-                {renamingId === sound.id ? (
-                  <input
-                    autoFocus
-                    defaultValue={sound.name}
-                    aria-label={strings.library.rename}
-                    onBlur={(e) => {
-                      renameSound(sound.id, e.target.value);
-                      setRenamingId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                      if (e.key === "Escape") setRenamingId(null);
-                    }}
-                    className="material-sunken w-full rounded-[var(--radius-control)] px-1 py-0.5 text-xs text-ink outline-none"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => select(sound)}
-                    aria-current={active ? "true" : undefined}
-                    className="flex-1 truncate text-left text-xs font-medium text-ink"
-                  >
-                    {sound.name}
-                  </button>
-                )}
-                <IconButton
-                  aria-label={strings.import.preview}
-                  size="sm"
-                  variant="ghost"
-                  icon={<Play size={13} weight="fill" />}
-                  onClick={() => void preview(sound)}
+              {/* The whole row opens the sound. It is one stretched button
+                  behind the content, so every part of the row that is not
+                  itself a control is a click target — the name alone is far
+                  too small a one. */}
+              {!renaming && (
+                <button
+                  type="button"
+                  onClick={() => select(sound)}
+                  aria-current={active ? "true" : undefined}
+                  className="absolute inset-0 z-0 cursor-pointer rounded-[var(--radius-control)] outline-none focus-visible:shadow-[var(--halo)]"
+                >
+                  <span className="sr-only">{sound.name}</span>
+                </button>
+              )}
+
+              {/* Content sits above the stretched button but lets pointer
+                  events through, so only the real controls intercept them. */}
+              <div className="pointer-events-none relative z-10">
+                {/* Accent spine on the open sound: readable at a glance down a
+                    long list, and not carried by colour alone (the row is also
+                    washed and its name is marked aria-current). */}
+                <span
+                  aria-hidden
+                  className="motion-ui absolute -inset-y-1 -left-2 w-[3px] rounded-full bg-accent"
+                  style={{ opacity: active ? 1 : 0, transform: active ? "none" : "scaleY(0.3)" }}
                 />
-                <IconButton
-                  aria-label={strings.studio.useInPlayground}
-                  size="sm"
-                  variant="ghost"
-                  icon={<ArrowRight size={13} weight="bold" />}
-                  onClick={() => sendToPlayground(sound)}
-                />
-              </div>
-              <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-ink-faint">
-                <span>{sound.type === "synth" ? strings.library.typeSynth : strings.library.typeSample}</span>
-                {sound.metadata.origin === "system-preset" && <span>{strings.library.preset}</span>}
-                {durationFor(sound) && <span>{durationFor(sound)}</span>}
-                <span>{sound.metadata.syncState === "cloud" ? strings.library.cloud : strings.library.local}</span>
-                <span className="ml-auto flex gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  {/* Thumbnail of the patch itself, so the list can be scanned
+                      by shape as well as by name. */}
+                  {sound.type === "synth" && sound.synthState && (
+                    <PresetSparkline
+                      state={sound.synthState}
+                      active={active}
+                      className="h-6 w-9 shrink-0"
+                    />
+                  )}
+                  {renaming ? (
+                    <input
+                      autoFocus
+                      defaultValue={sound.name}
+                      aria-label={strings.library.rename}
+                      onBlur={(e) => {
+                        renameSound(sound.id, e.target.value);
+                        setRenamingId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      className="material-sunken pointer-events-auto w-full rounded-[var(--radius-control)] px-1 py-0.5 text-xs text-ink outline-none"
+                    />
+                  ) : (
+                    <span className="flex-1 truncate text-xs font-medium text-ink">{sound.name}</span>
+                  )}
                   <IconButton
-                    aria-label={strings.library.rename}
+                    aria-label={`${strings.import.preview}: ${sound.name}`}
+                    title={strings.import.preview}
                     size="sm"
                     variant="ghost"
-                    icon={<PencilSimple size={12} />}
-                    onClick={() => setRenamingId(sound.id)}
+                    className="pointer-events-auto"
+                    icon={<Play size={13} weight="fill" />}
+                    onClick={() => void preview(sound)}
                   />
-                  <IconButton
-                    aria-label={strings.library.duplicate}
-                    size="sm"
-                    variant="ghost"
-                    icon={<Copy size={12} />}
-                    onClick={() => {
-                      const id = duplicateSound(sound.id);
-                      if (id) setEditingSoundId(id);
-                    }}
+                  <MenuButton
+                    label={`${strings.library.actions}: ${sound.name}`}
+                    menuLabel={sound.name}
+                    className="pointer-events-auto"
+                    icon={<DotsThreeVertical size={14} weight="bold" />}
+                    actions={actionsFor(sound)}
                   />
-                  <IconButton
-                    aria-label={strings.library.delete}
-                    size="sm"
-                    variant="ghost"
-                    icon={<Trash size={12} />}
-                    onClick={() => {
-                      if (window.confirm(`${strings.library.delete}: ${sound.name}`)) {
-                        deleteSound(sound.id);
-                        if (editingSoundId === sound.id) setEditingSoundId(null);
-                      }
-                    }}
-                  />
-                </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-ink-faint">
+                  <span>{sound.type === "synth" ? strings.library.typeSynth : strings.library.typeSample}</span>
+                  {sound.metadata.origin === "system-preset" && <span>{strings.library.preset}</span>}
+                  {durationFor(sound) && <span>{durationFor(sound)}</span>}
+                  <span>{sound.metadata.syncState === "cloud" ? strings.library.cloud : strings.library.local}</span>
+                </div>
               </div>
             </li>
           );
         })}
       </ul>
+
+      {/* One way in for every kind of sound: built, recorded, or imported. */}
+      <div className="shrink-0 border-t border-edge p-2">
+        <MenuButton
+          label={strings.library.add}
+          align="start"
+          variant="default"
+          icon={<Plus size={13} weight="bold" />}
+          className="w-full"
+          actions={addActions}
+        >
+          {strings.library.add}
+        </MenuButton>
+      </div>
     </Panel>
   );
 }

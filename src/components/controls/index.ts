@@ -23,6 +23,9 @@ export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
 export { IconButton } from "./IconButton";
 export type { IconButtonProps } from "./IconButton";
 
+export { MenuButton } from "./MenuButton";
+export type { MenuButtonProps, MenuAction } from "./MenuButton";
+
 export { Display } from "./Display";
 export type { DisplayProps } from "./Display";
 

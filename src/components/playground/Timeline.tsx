@@ -8,12 +8,13 @@
  * display-rate position, so moving it never re-renders the clip list.
  */
 import { useCallback, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { Button } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { createId } from "@/lib/schema/factories";
-import { TRACK_ROW_HEIGHT } from "./TrackList";
+import { TIMELINE_RULER_HEIGHT, TRACK_ROW_HEIGHT } from "./layout";
 import { strings } from "@/i18n";
 import type { Clip } from "@/lib/schema/types";
 
@@ -31,7 +32,18 @@ interface DragState {
   originLength: number;
 }
 
-export function Timeline({ pixelsPerBeat, onZoom }: { pixelsPerBeat: number; onZoom: (next: number) => void }) {
+export function Timeline({
+  pixelsPerBeat,
+  onZoom,
+  scrollRef,
+  onScroll,
+}: {
+  pixelsPerBeat: number;
+  onZoom: (next: number) => void;
+  /** The scrolling lane container, so the track list can be kept in step. */
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  onScroll?: () => void;
+}) {
   const project = useProjectStore((s) => s.project);
   const tracks = project.tracks;
   const patterns = useProjectStore((s) => s.project.patterns);
@@ -180,7 +192,7 @@ export function Timeline({ pixelsPerBeat, onZoom }: { pixelsPerBeat: number; onZ
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-base">
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-edge bg-surface px-3">
+      <div className="flex h-9 shrink-0 items-center gap-3 overflow-x-auto border-b border-edge bg-surface px-3">
         <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
           Snap
           <select
@@ -251,8 +263,9 @@ export function Timeline({ pixelsPerBeat, onZoom }: { pixelsPerBeat: number; onZ
       </div>
 
       <div
-        ref={surfaceRef}
+        ref={scrollRef ?? surfaceRef}
         className="relative min-h-0 flex-1 overflow-auto"
+        onScroll={onScroll}
         onPointerMove={onPointerMove}
         onPointerUp={() => {
           drag.current = null;
@@ -260,7 +273,10 @@ export function Timeline({ pixelsPerBeat, onZoom }: { pixelsPerBeat: number; onZ
       >
         <div style={{ width: totalBeats * pixelsPerBeat, minWidth: "100%" }}>
           {/* Bar ruler */}
-          <div className="sticky top-0 z-10 flex h-6 border-b border-edge bg-surface-sunken">
+          <div
+            style={{ height: TIMELINE_RULER_HEIGHT }}
+            className="sticky top-0 z-10 flex border-b border-edge bg-surface-sunken"
+          >
             {Array.from({ length: bars }, (_, bar) => (
               <div
                 key={bar}
