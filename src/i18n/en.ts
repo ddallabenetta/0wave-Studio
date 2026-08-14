@@ -42,14 +42,12 @@ export const en = {
       record: "Record",
       import: "Import",
       sample: "Sample Editor",
-      library: "Sound Library",
     },
     modeHints: {
       synth: "Build a sound from nothing",
       record: "Capture something with your microphone",
       import: "Bring in an audio file from your computer",
       sample: "Trim, tune and loop a recorded sound",
-      library: "Every sound in this project",
     },
     useInPlayground: "Use in Playground",
     editInStudio: "Edit in Studio",
@@ -58,7 +56,6 @@ export const en = {
     duplicateBeforeEditingHint:
       "This sound is used by a track. Make a copy so you don't change how that track sounds.",
     saveSound: "Save Sound",
-    saveAsNew: "Save as New",
     newSound: "New Sound",
     newSoundTitle: "Pick a sound to start from",
     newSoundBody:
@@ -67,7 +64,6 @@ export const en = {
     surpriseMe: "Surprise me",
     auditionHint: "Press a card's play button to hear it before you commit.",
     spaceHint: "SPACE: play the selected sound",
-    editingLabel: "Editing",
     emptyTitle: "No sound open",
     emptyBody: "Pick one from the library on the left, or create a new one.",
     simpleIntro:
@@ -248,6 +244,11 @@ export const en = {
     filterSynth: "Synth",
     filterSample: "Sample",
     newSound: "New Sound",
+    add: "Add a sound",
+    addSound: "Build a sound",
+    addRecording: "Record from microphone",
+    addSample: "Import an audio file",
+    actions: "Sound actions",
     duplicate: "Duplicate",
     rename: "Rename",
     delete: "Delete",

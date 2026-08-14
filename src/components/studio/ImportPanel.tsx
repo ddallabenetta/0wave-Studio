@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { UploadSimple, Play } from "@phosphor-icons/react";
 import { Button } from "@/components/controls";
 import { useEngineRef } from "@/components/hooks/useEngine";
+import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { Panel } from "./Panel";
 import { decodeUpload, saveSampleSound } from "./saveSampleSound";
@@ -75,9 +76,26 @@ export function ImportPanel() {
     setStudioMode("sample");
   };
 
+  /* Importing is a temporary state, not a place: leaving it goes back to
+     whichever sound is open. */
+  const close = () => {
+    const current = useProjectStore
+      .getState()
+      .project.sounds.find((s) => s.id === useUiStore.getState().editingSoundId);
+    setStudioMode(current?.type === "sample" ? "sample" : "synth");
+  };
+
   return (
     <div className="p-3">
-      <Panel title={strings.import.title}>
+      <Panel
+        title={strings.import.title}
+        hint={strings.studio.modeHints.import}
+        actions={
+          <Button size="sm" variant="ghost" onClick={close}>
+            {strings.common.close}
+          </Button>
+        }
+      >
         <div className="flex flex-col gap-4 p-4">
           <div
             onDragOver={(e) => {

@@ -3,7 +3,12 @@
 /**
  * Track list with the essential mixer: sound assignment, volume, pan, mute,
  * solo, and a direct route back into the Studio for deep sound editing.
+ *
+ * Rows line up with the timeline's lanes: same row height, a spacer standing
+ * in for the timeline's bar ruler, and a scroll position mirrored by the
+ * Playground so the two never drift apart.
  */
+import type { RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Copy, Trash, ArrowUp, ArrowDown, PencilSimple } from "@phosphor-icons/react";
 import { Button, Fader, IconButton } from "@/components/controls";
@@ -12,10 +17,16 @@ import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { strings } from "@/i18n";
 import { useState } from "react";
+import { TIMELINE_RULER_HEIGHT, TRACK_ROW_HEIGHT } from "./layout";
 
-export const TRACK_ROW_HEIGHT = 64;
-
-export function TrackList() {
+export function TrackList({
+  scrollRef,
+  onScroll,
+}: {
+  /** The scrolling row container, so the timeline can be kept in step. */
+  scrollRef?: RefObject<HTMLUListElement | null>;
+  onScroll?: () => void;
+}) {
   const router = useRouter();
   const tracks = useProjectStore((s) => s.project.tracks);
   const sounds = useProjectStore((s) => s.project.sounds);
@@ -58,7 +69,15 @@ export function TrackList() {
         </div>
       </div>
 
-      <ul className="stagger min-h-0 flex-1 overflow-y-auto">
+      {/* Stands in for the timeline's bar ruler, which is sticky over there:
+          without it every row would sit one ruler above its own lane. */}
+      <div
+        aria-hidden
+        style={{ height: TIMELINE_RULER_HEIGHT }}
+        className="shrink-0 border-b border-edge bg-surface-sunken"
+      />
+
+      <ul ref={scrollRef} onScroll={onScroll} className="stagger min-h-0 flex-1 overflow-y-auto">
         {tracks.length === 0 && (
           <li className="p-4 text-xs leading-relaxed text-ink-faint">
             {strings.playground.tracks.addTrack}

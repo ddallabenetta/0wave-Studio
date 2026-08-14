@@ -48,14 +48,12 @@ export const it: typeof en = {
       record: "Registra",
       import: "Importa",
       sample: "Editor Campione",
-      library: "Libreria Suoni",
     },
     modeHints: {
       synth: "Costruisci un suono dal nulla",
       record: "Cattura qualcosa con il microfono",
       import: "Porta dentro un file audio dal computer",
       sample: "Taglia, intona e metti in loop un suono registrato",
-      library: "Tutti i suoni di questo progetto",
     },
     useInPlayground: "Usa nel Playground",
     editInStudio: "Modifica nello Studio",
@@ -64,7 +62,6 @@ export const it: typeof en = {
     duplicateBeforeEditingHint:
       "Questo suono è usato da una traccia. Fanne una copia per non cambiare come suona quella traccia.",
     saveSound: "Salva Suono",
-    saveAsNew: "Salva come Nuovo",
     newSound: "Nuovo Suono",
     newSoundTitle: "Scegli da dove partire",
     newSoundBody:
@@ -73,7 +70,6 @@ export const it: typeof en = {
     surpriseMe: "Sorprendimi",
     auditionHint: "Premi il tasto play di una scheda per sentirla prima di sceglierla.",
     spaceHint: "SPAZIO: riproduci il suono selezionato",
-    editingLabel: "In modifica",
     emptyTitle: "Nessun suono aperto",
     emptyBody: "Scegline uno dalla libreria a sinistra, oppure creane uno nuovo.",
     simpleIntro:
@@ -254,6 +250,11 @@ export const it: typeof en = {
     filterSynth: "Synth",
     filterSample: "Campioni",
     newSound: "Nuovo Suono",
+    add: "Aggiungi un suono",
+    addSound: "Costruisci un suono",
+    addRecording: "Registra dal microfono",
+    addSample: "Importa un file audio",
+    actions: "Azioni del suono",
     duplicate: "Duplica",
     rename: "Rinomina",
     delete: "Elimina",

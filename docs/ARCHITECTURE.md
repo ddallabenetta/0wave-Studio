@@ -50,7 +50,7 @@ flowchart LR
 
 `/studio` and `/playground` are the only creative destinations. They share one `AppShell` (top bar + Start Audio gate), one project store, one audio engine singleton. Route changes are client-side navigations: the AudioContext, transport state, sounds, patterns and clips all survive.
 
-**Studio** owns sound creation: Synth, Record, Import, Sample Editor, Sound Library (internal modes, not main sections). **Playground** owns composition: transport, tracks, timeline, Pattern Editor, Piano Roll, Clip Editor, essential mixer.
+**Studio** owns sound creation: the sound library on the left, and a central view that follows what is selected — synth editor, sample editor, or the temporary record and import states (internal, not main sections). **Playground** owns composition: transport, tracks, timeline, Pattern Editor, Piano Roll, Clip Editor, essential mixer.
 
 ## Shared sound model
 

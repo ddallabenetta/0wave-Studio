@@ -11,7 +11,7 @@
  */
 import { WaveSine } from "@phosphor-icons/react";
 import { Button, Knob, SegmentedControl, Toggle } from "@/components/controls";
-import { HelpTip } from "@/components/guide/HelpTip";
+import { ExplainNote, HelpTip } from "@/components/guide/HelpTip";
 import { Panel, ControlRow } from "./Panel";
 import { EffectsSection } from "./EffectsSection";
 import { BasicSynthPanel } from "./BasicSynthPanel";
@@ -19,6 +19,7 @@ import { WaveformPreview } from "./WaveformPreview";
 import { useSynthBinding } from "./useSynthBinding";
 import { useUiStore } from "@/lib/state/ui-store";
 import { strings } from "@/i18n";
+import type { Complexity } from "@/lib/state/ui-store";
 import type { OscillatorState, Waveform } from "@/lib/schema/types";
 
 const WAVEFORMS: { value: Waveform; label: string }[] = [
@@ -32,6 +33,21 @@ const FILTER_MODES = [
   { value: "lowpass" as const, label: "LP" },
   { value: "highpass" as const, label: "HP" },
   { value: "bandpass" as const, label: "BP" },
+];
+
+/** How much of the synthesizer is on screen. Belongs to this view, not to
+ *  a global toolbar: it only ever changes what the synth editor shows. */
+const COMPLEXITY: { value: Complexity; label: string; hint: string }[] = [
+  {
+    value: "basic",
+    label: strings.studio.complexity.basic,
+    hint: strings.studio.complexityHints.basic,
+  },
+  {
+    value: "advanced",
+    label: strings.studio.complexity.advanced,
+    hint: strings.studio.complexityHints.advanced,
+  },
 ];
 
 const LFO_DESTINATIONS = [
@@ -144,10 +160,37 @@ function OscillatorControls({
   );
 }
 
+/**
+ * The editor's own header: which sound is open, and how much of the
+ * synthesizer to show. Both belong to this view — there is no Studio-wide
+ * toolbar repeating them.
+ */
+function SynthHeader({ name, complexity }: { name: string; complexity: Complexity }) {
+  const setComplexity = useUiStore((s) => s.setComplexity);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{name}</h2>
+        <SegmentedControl
+          label="Complexity"
+          options={COMPLEXITY}
+          value={complexity}
+          onChange={setComplexity}
+          size="sm"
+        />
+      </div>
+      <ExplainNote className="self-start">
+        {strings.studio.modeHints.synth}
+        {complexity === "basic" && ` — ${strings.studio.simpleIntro}`}
+      </ExplainNote>
+    </div>
+  );
+}
+
 export function SynthEditor({ soundId }: { soundId: string | null }) {
   const complexity = useUiStore((s) => s.complexity);
   const advanced = complexity === "advanced";
-  const { state, set } = useSynthBinding(soundId);
+  const { sound, state, set } = useSynthBinding(soundId);
 
   if (!state) {
     return (
@@ -176,6 +219,7 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
   if (!advanced) {
     return (
       <div className="flex flex-col gap-3 overflow-y-auto p-3">
+        <SynthHeader name={sound?.name ?? ""} complexity={complexity} />
         <Panel title={strings.studio.sections.preview} term="waveform">
           <div className="p-3">
             <WaveformPreview state={state} />
@@ -188,6 +232,7 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
 
   return (
     <div className="stagger flex flex-col gap-3 overflow-y-auto p-3">
+      <SynthHeader name={sound?.name ?? ""} complexity={complexity} />
       <Panel title={strings.studio.sections.source} term="oscillator">
         <div className="flex flex-col gap-3 p-3">
           <OscillatorControls osc={state.osc1} prefix="osc1" set={set} advanced={advanced} />

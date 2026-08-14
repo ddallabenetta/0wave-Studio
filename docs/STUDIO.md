@@ -4,32 +4,48 @@ The Studio is where sounds are created and prepared. It never contains the
 arrangement timeline, the global piano roll, or the song structure: those live
 in the Playground.
 
-## Modes
+## What the central view shows
 
-Modes are internal to the Studio and never compete with the two main
-destinations in the top bar.
+There is no mode bar. The Studio has one left panel — the sound library —
+and a central view that follows from what is selected there.
 
-| Mode | What it does |
+| State | What the centre shows |
 |---|---|
-| Synth | Full subtractive synthesizer editor |
-| Record | Microphone capture with real input metering |
-| Import | Drag and drop or file picker with validation and decoding |
-| Sample Editor | Non-destructive waveform editing for a `SampleSound` |
-| Sound Library | The project's sounds; also always visible as the left panel |
+| A synth sound is open | The synthesizer editor |
+| A sample sound is open | The sample editor: non-destructive waveform editing |
+| Recording | Microphone capture with real input metering |
+| Importing | Drag and drop or file picker with validation and decoding |
 
-Each mode tab carries an icon and a one-line hint (`strings.studio.modeHints`)
-saying what it is for, and the active mode's hint is repeated under the tab
-strip while hints are on. "Sample Editor" means nothing to a newcomer;
-"Trim, tune and loop a recorded sound" does.
+Selecting a sound in the library opens the editor its type calls for, so a
+sample can never end up in the synth editor. Recording and importing are
+temporary states, not destinations: they are entered from the library's "+",
+and left either by saving the new sound — which opens it in the sample editor
+— or by pressing Close.
+
+`strings.studio.modeHints` still carries the one-line, plain-language
+explanation of each of these; the record and import panels show theirs while
+hints are on, and the synth editor shows its own.
 
 ## Layout
 
 ```
-[ mode tabs | Simple/Full control | editing: name | New Sound | Save as New | Use in Playground ]
-[ hint for the active mode (hidden when hints are off)                                        ]
-[ Sound Library | editor for the active mode | Analyzer ]
-[                      musical keyboard                     ]
+[ Sound Library | name + Simple/Full control | Analyzer / AI Connector ]
+[      "+"      | editor for the open sound  |                         ]
+[                      musical keyboard                                ]
 ```
+
+Nothing in the Studio repeats itself. The sound's name is the editor's
+heading (renaming is in the row menu, not a second field); Simple/Full
+control belongs to the synth editor because that is the only thing it
+changes; and the library is the left panel rather than also being a mode.
+
+## Adding a sound
+
+The "+" at the foot of the library asks which kind of sound is being added:
+
+- **Build a sound** — opens the guided preset picker (`NewSoundDialog`).
+- **Record from microphone** — puts the central view into capture.
+- **Import an audio file** — puts the central view into import.
 
 ## Synth editor
 
@@ -60,14 +76,19 @@ Alt+click.
 
 Editing a sound writes straight to the project store and the engine. Edits are
 persisted by autosave, so there is no separate "save" step and no button that
-pretends to do one. The header offers:
+pretends to do one.
 
-- **Init Patch** - creates a fresh default synth sound and opens it.
-- **Save as New** - duplicates the current sound.
-- **Duplicate before editing** - shown instead of Save as New when the sound is
+Everything a single sound can do lives in its own row in the library: the row
+itself opens the sound, the play button auditions it, and the "..." menu
+offers
+
+- **Rename** - in place, in the row.
+- **Duplicate** - copies the sound and opens the copy.
+- **Duplicate before editing** - the same action, renamed, when the sound is
   already used by a track, per ADR-005.
 - **Use in Playground** - marks the sound for handoff and navigates to the
   Playground, which assigns it to a free track or creates one.
+- **Delete** - after a confirmation.
 
 ### Shared-sound behaviour (ADR-005)
 
