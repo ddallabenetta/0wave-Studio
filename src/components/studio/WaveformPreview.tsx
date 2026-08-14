@@ -26,8 +26,18 @@ export function WaveformPreview({ state }: { state: SynthState }) {
           className="h-32 w-full"
           aria-hidden
         >
-          {/* Zero line */}
-          <line x1="0" y1="0" x2="1" y2="0" stroke="var(--edge-strong)" strokeWidth="1" />
+          {/* Zero line. `vectorEffect` is not optional here: the viewBox is
+              2 units tall stretched over ~128px, so a plain strokeWidth of 1
+              is drawn as a 64px slab across the middle of the display. */}
+          <line
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="0"
+            stroke="var(--edge-strong)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
           {/* Wave */}
           <path
             d={wavePath}

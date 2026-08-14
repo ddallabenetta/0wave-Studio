@@ -27,6 +27,50 @@ interface Rect {
 const PAD = 8;
 const CARD_WIDTH = 320;
 const CARD_GAP = 14;
+/** Room the card needs below its top edge; also its centring height. */
+const CARD_HEIGHT = 190;
+const EDGE = 12;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(value, max));
+
+/**
+ * Where the explanation goes relative to the thing it explains.
+ *
+ * Below the target is the first choice — it reads in the same direction as
+ * the sentence. But the tour's targets include full-height panels, and a
+ * card forced below one of those ends up sitting *on* the panel, covering
+ * exactly what it is pointing at. So: below if it fits, beside it if not,
+ * and centred when there is no target on this page at all.
+ *
+ * Everything is in pixels. Centring via `translate` would be overwritten by
+ * the card's own entrance animation, which silently pushes it off-centre.
+ */
+function placeCard(rect: Rect | null): React.CSSProperties {
+  const maxTop = window.innerHeight - CARD_HEIGHT - EDGE;
+  const maxLeft = window.innerWidth - CARD_WIDTH - EDGE;
+
+  if (!rect) {
+    return {
+      top: clamp(window.innerHeight / 2 - CARD_HEIGHT / 2, EDGE, Math.max(EDGE, maxTop)),
+      left: clamp((window.innerWidth - CARD_WIDTH) / 2, EDGE, Math.max(EDGE, maxLeft)),
+    };
+  }
+
+  const below = rect.top + rect.height + CARD_GAP;
+  if (below <= maxTop) {
+    return {
+      top: below,
+      left: clamp(rect.left + rect.width / 2 - CARD_WIDTH / 2, EDGE, Math.max(EDGE, maxLeft)),
+    };
+  }
+
+  // No room underneath: sit beside the target, on whichever side has space.
+  const rightOf = rect.left + rect.width + CARD_GAP;
+  const leftOf = rect.left - CARD_WIDTH - CARD_GAP;
+  const left = rightOf <= maxLeft ? rightOf : leftOf >= EDGE ? leftOf : clamp(rect.left, EDGE, Math.max(EDGE, maxLeft));
+  return { top: clamp(rect.top, EDGE, Math.max(EDGE, maxTop)), left };
+}
 
 export function TourGuide() {
   const stepIndex = useGuideStore((s) => s.tourStep);
@@ -82,20 +126,7 @@ export function TourGuide() {
   const copy = strings.guide.tour[step];
   const isLast = stepIndex === TOUR_STEPS.length - 1;
 
-  /* Park the card under the spotlight, or centre it when there is none.
-     Both axes are clamped so the card can never leave the viewport. */
-  const cardStyle: React.CSSProperties = rect
-    ? {
-        top: Math.min(rect.top + rect.height + CARD_GAP, window.innerHeight - 190),
-        left: Math.max(
-          12,
-          Math.min(
-            rect.left + rect.width / 2 - CARD_WIDTH / 2,
-            window.innerWidth - CARD_WIDTH - 12,
-          ),
-        ),
-      }
-    : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
+  const cardStyle = placeCard(rect);
 
   return (
     <div aria-live="polite" className="pointer-events-none fixed inset-0 z-[55]">

@@ -154,33 +154,23 @@ export function Pad2D({
         className={`material-sunken relative w-full select-none rounded-[var(--radius-control)] ${
           disabled ? "cursor-not-allowed opacity-50" : "cursor-crosshair"
         }`}
-        style={{ height, touchAction: "none" }}
-      >
-        {/* Field wash. The surface itself shows what the axes mean: it
-            brightens towards the right (the X axis) and lifts towards the
-            top (the Y axis), so the corner you are heading for is legible
-            before you get there. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-[var(--radius-control)]"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent 15%, color-mix(in srgb, var(--accent) 14%, transparent) 100%), linear-gradient(0deg, transparent 30%, color-mix(in srgb, var(--accent-glow) 10%, transparent) 100%)",
-          }}
-        />
-
-        {/* Light that follows the point, so the pad glows where you left it. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-[var(--radius-control)]"
-          style={{
-            background: `radial-gradient(120px circle at ${px}% ${100 - py}%, color-mix(in srgb, var(--accent) ${
-              dragging ? 30 : 18
+        style={{
+          height,
+          touchAction: "none",
+          /* The wash lives in the element's own background rather than in an
+             overlay child: a child would paint over `material-sunken`'s inset
+             bevel and flatten the well. Three layers, front to back —
+             a light that follows the point, then the two axis gradients that
+             say what the axes mean (right is brighter, up has more movement). */
+          backgroundImage: [
+            `radial-gradient(120px circle at ${px}% ${100 - py}%, color-mix(in srgb, var(--accent) ${
+              dragging ? 26 : 14
             }%, transparent), transparent 70%)`,
-            transition: "background var(--dur-2) linear",
-          }}
-        />
-
+            "linear-gradient(90deg, transparent 25%, color-mix(in srgb, var(--accent) 10%, transparent) 100%)",
+            "linear-gradient(0deg, transparent 40%, color-mix(in srgb, var(--accent-glow) 7%, transparent) 100%)",
+          ].join(", "),
+        }}
+      >
         {/* Quarter grid: reference marks so a position can be remembered. */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           {[25, 50, 75].map((offset) => (

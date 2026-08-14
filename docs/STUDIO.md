@@ -17,10 +17,16 @@ destinations in the top bar.
 | Sample Editor | Non-destructive waveform editing for a `SampleSound` |
 | Sound Library | The project's sounds; also always visible as the left panel |
 
+Each mode tab carries an icon and a one-line hint (`strings.studio.modeHints`)
+saying what it is for, and the active mode's hint is repeated under the tab
+strip while hints are on. "Sample Editor" means nothing to a newcomer;
+"Trim, tune and loop a recorded sound" does.
+
 ## Layout
 
 ```
-[ mode tabs | Basic/Advanced | sound name | Init Patch | Save as New | Use in Playground ]
+[ mode tabs | Simple/Full control | editing: name | New Sound | Save as New | Use in Playground ]
+[ hint for the active mode (hidden when hints are off)                                        ]
 [ Sound Library | editor for the active mode | Analyzer ]
 [                      musical keyboard                     ]
 ```

@@ -128,7 +128,13 @@ export function WelcomeOverlay() {
         </button>
 
         <header className="relative flex flex-col items-center px-10 pb-6 pt-10 text-center">
-          <WaveMark className="mb-5 h-14 w-[300px]" />
+          <WaveMark className="mb-3 h-14 w-[300px]" />
+
+          {/* Mono wordmark: the slashed zero is the only thing that keeps
+              "0wave" from being read as "Owave" at this size. */}
+          <p className="anim-fade mb-4 text-sm font-semibold tracking-tight text-ink">
+            <span className="font-mono text-accent-ink">0wave</span> Studio
+          </p>
 
           <span className="anim-rise flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-ink">
             <span aria-hidden className="relative flex size-1.5">
@@ -189,6 +195,8 @@ export function WelcomeOverlay() {
             type="button"
             onClick={() => {
               dismissWelcome();
+              // The tour's first three stops live in the Studio.
+              router.push("/studio");
               startTour();
             }}
             className="motion-ui rounded-[var(--radius-control)] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:bg-accent-wash"

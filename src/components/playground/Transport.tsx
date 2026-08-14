@@ -6,6 +6,7 @@
  */
 import { Play, Pause, Stop, SkipBack } from "@phosphor-icons/react";
 import { Display, IconButton, Knob, Toggle } from "@/components/controls";
+import { HelpTip } from "@/components/guide/HelpTip";
 import { useEngineRef } from "@/components/hooks/useEngine";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
@@ -48,8 +49,20 @@ export function Transport() {
     useUiStore.getState().setPositionBeats(0);
   };
 
+  const numberFieldClass =
+    "material-sunken motion-ui w-14 rounded-[var(--radius-control)] px-1 py-1 text-center font-mono text-xs text-ink outline-none focus:shadow-[var(--halo)]";
+
   return (
-    <div className="flex items-center gap-3 border-b border-edge bg-surface px-3 py-2">
+    <div className="relative flex items-center gap-3 border-b border-edge bg-surface px-3 py-2">
+      {/* A thread of accent light along the bar while the transport runs:
+          the one piece of chrome that has to be readable from across the
+          room. Driven by real transport state, not a timer. */}
+      <span
+        aria-hidden
+        className="motion-ui pointer-events-none absolute inset-x-0 bottom-0 h-px bg-accent"
+        style={{ opacity: playing ? 1 : 0 }}
+      />
+
       <div className="flex items-center gap-1">
         <IconButton
           aria-label={strings.playground.transport.toStart}
@@ -71,6 +84,7 @@ export function Transport() {
             variant="primary"
             onClick={play}
             disabled={disabled}
+            className={disabled ? undefined : "glow-accent"}
           />
         )}
         <IconButton
@@ -81,11 +95,23 @@ export function Transport() {
         />
       </div>
 
-      <Display value={formatPosition(position, beatsPerBar)} size="md" />
+      <div className="relative">
+        <Display value={formatPosition(position, beatsPerBar)} size="md" />
+        {/* Running indicator on the position readout. */}
+        {playing && (
+          <span aria-hidden className="absolute -right-1 -top-1 flex size-2">
+            <span className="anim-ring absolute inset-0 rounded-full text-accent" />
+            <span className="relative size-2 rounded-full bg-accent" />
+          </span>
+        )}
+      </div>
 
-      <label className="flex items-center gap-2">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
-          {strings.playground.transport.bpm}
+      {/* Tempo is labelled in plain words with the unit kept beside it, so
+          the number stays meaningful to somebody who has never said "BPM". */}
+      <label className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.transport.speed}
+          <HelpTip term="bpm" placement="bottom" />
         </span>
         <input
           type="number"
@@ -100,32 +126,41 @@ export function Transport() {
               engineRef.current?.setTempo(value);
             }
           }}
-          className="material-sunken w-16 rounded-[var(--radius-control)] px-2 py-1 text-center font-mono text-sm text-ink outline-none"
+          className="material-sunken motion-ui w-16 rounded-[var(--radius-control)] px-2 py-1 text-center font-mono text-sm text-ink outline-none focus:shadow-[var(--halo)]"
         />
+        <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.transport.bpm}
+        </span>
       </label>
 
-      <Knob
-        label={strings.playground.transport.swing}
-        value={swing}
-        min={0}
-        max={1}
-        defaultValue={0}
-        size={36}
-        onChange={(v) => {
-          setSwing(v);
-          engineRef.current?.setSwing(v);
-        }}
-      />
+      <div className="flex items-center gap-1">
+        <Knob
+          label={strings.playground.transport.swing}
+          value={swing}
+          min={0}
+          max={1}
+          defaultValue={0}
+          size={36}
+          onChange={(v) => {
+            setSwing(v);
+            engineRef.current?.setSwing(v);
+          }}
+        />
+        <HelpTip term="swing" placement="bottom" />
+      </div>
 
-      <Toggle
-        checked={metronome}
-        onChange={(on) => {
-          setMetronome(on);
-          engineRef.current?.setMetronome(on);
-        }}
-        label={strings.playground.transport.metronome}
-        led={metronome ? "on" : "off"}
-      />
+      <div className="flex items-center gap-1">
+        <Toggle
+          checked={metronome}
+          onChange={(on) => {
+            setMetronome(on);
+            engineRef.current?.setMetronome(on);
+          }}
+          label={strings.playground.transport.metronome}
+          led={metronome ? "on" : "off"}
+        />
+        <HelpTip term="metronome" placement="bottom" />
+      </div>
 
       <div className="flex items-center gap-2">
         <Toggle
@@ -138,32 +173,42 @@ export function Transport() {
           label={strings.playground.transport.loop}
           led={loopRange.enabled ? "on" : "off"}
         />
-        <input
-          type="number"
-          min={0}
-          step={1}
-          value={loopRange.startBeat}
-          aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.start}`}
-          onChange={(e) => {
-            const next = { ...loopRange, startBeat: Math.max(0, Number(e.target.value)) };
-            setLoopRange(next);
-            engineRef.current?.setLoopRange(next);
-          }}
-          className="material-sunken w-14 rounded-[var(--radius-control)] px-1 py-1 text-center font-mono text-xs text-ink outline-none"
-        />
-        <input
-          type="number"
-          min={1}
-          step={1}
-          value={loopRange.endBeat}
-          aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.lengthBeats}`}
-          onChange={(e) => {
-            const next = { ...loopRange, endBeat: Math.max(1, Number(e.target.value)) };
-            setLoopRange(next);
-            engineRef.current?.setLoopRange(next);
-          }}
-          className="material-sunken w-14 rounded-[var(--radius-control)] px-1 py-1 text-center font-mono text-xs text-ink outline-none"
-        />
+        <HelpTip term="loop" placement="bottom" />
+        {/* The two loop bounds were a pair of unlabelled number fields.
+            Naming them is the difference between an obvious control and a
+            guess. */}
+        <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.transport.loopFrom}
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={loopRange.startBeat}
+            aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.start}`}
+            onChange={(e) => {
+              const next = { ...loopRange, startBeat: Math.max(0, Number(e.target.value)) };
+              setLoopRange(next);
+              engineRef.current?.setLoopRange(next);
+            }}
+            className={numberFieldClass}
+          />
+        </label>
+        <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.transport.loopTo}
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={loopRange.endBeat}
+            aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.lengthBeats}`}
+            onChange={(e) => {
+              const next = { ...loopRange, endBeat: Math.max(1, Number(e.target.value)) };
+              setLoopRange(next);
+              engineRef.current?.setLoopRange(next);
+            }}
+            className={numberFieldClass}
+          />
+        </label>
       </div>
     </div>
   );

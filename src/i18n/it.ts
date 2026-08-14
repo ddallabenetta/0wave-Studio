@@ -332,6 +332,8 @@ export const it: typeof en = {
       addInstrument: "Traccia strumento",
       addAudio: "Traccia audio",
       rename: "Rinomina",
+      moveUp: "Sposta traccia su",
+      moveDown: "Sposta traccia giù",
       duplicateTrack: "Duplica traccia",
       deleteTrack: "Elimina traccia",
       assignSound: "Assegna suono",
@@ -357,9 +359,23 @@ export const it: typeof en = {
       addPatternClip: "Aggiungi clip pattern",
       addAudioClip: "Aggiungi clip audio",
       addAudioClipHint: "Assegna prima un suono campione alla traccia",
+      addClipHint: "Doppio clic su una corsia strumento per metterci un pattern.",
       velocity: "Velocity",
       gate: "Gate",
       bars: "{n} battute",
+      gridHint:
+        "Clicca un quadretto per mettere una nota, cliccalo di nuovo per toglierla. Le righe sono le altezze, le colonne il tempo, e la colonna illuminata è il punto in cui sta suonando adesso.",
+      offGridHint: "* = la nota è fuori dalla griglia attuale; il suo tempo esatto è conservato.",
+      lengthHints: {
+        one: "Una battuta — una figura corta che si ripete",
+        two: "Due battute — spazio per una piccola variazione",
+        four: "Quattro battute — una frase intera",
+      },
+      resolutionHints: {
+        eighth: "Due quadretti per battito — larghi e facili da piazzare",
+        sixteenth: "Quattro quadretti per battito — la griglia tipica dei ritmi",
+        thirtysecond: "Otto quadretti per battito — per rullate e dettagli veloci",
+      },
     },
     inspector: {
       track: "Traccia",
@@ -416,7 +432,7 @@ export const it: typeof en = {
       eyebrow: "Benvenuto",
       title: "Crea un suono. Poi trasformalo in un loop.",
       body:
-        "0wave Studio è un sintetizzatore e un piccolo studio che gira nel browser. Non serve saper leggere la musica, e niente di quello che fai qui può rompere qualcosa. Scegli da dove partire.",
+        "Questo è un sintetizzatore e un piccolo studio che gira nel browser. Non serve saper leggere la musica, e niente di quello che fai qui può rompere qualcosa. Scegli da dove partire.",
       pathSound: {
         title: "Progetta un suono",
         body: "Parti da una cassa, un pad o un basso e rimodellalo con quattro cursori in parole semplici.",

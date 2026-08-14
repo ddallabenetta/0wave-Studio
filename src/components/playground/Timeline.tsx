@@ -345,17 +345,27 @@ export function Timeline({ pixelsPerBeat, onZoom }: { pixelsPerBeat: number; onZ
             </div>
           ))}
 
-          {/* Playhead */}
+          {/* Playhead. One element, positioned from the store's display-rate
+              value; the glow and the head are pseudo-free decoration on the
+              same node, so following it still costs nothing per frame. */}
           <div
             aria-hidden
             className="pointer-events-none absolute bottom-0 top-0 w-px bg-accent"
-            style={{ left: position * pixelsPerBeat }}
-          />
+            style={{
+              left: position * pixelsPerBeat,
+              boxShadow: "0 0 8px 0 color-mix(in srgb, var(--accent) 70%, transparent)",
+            }}
+          >
+            <span
+              className="absolute -left-[3px] top-0 size-[7px] rounded-b-[2px] bg-accent"
+              style={{ clipPath: "polygon(0 0, 100% 0, 50% 100%)" }}
+            />
+          </div>
         </div>
 
         {tracks.length > 0 && (
           <p className="px-3 py-2 font-mono text-[10px] text-ink-faint">
-            {strings.playground.pattern.newPattern}: double-click an instrument lane
+            {strings.playground.pattern.addClipHint}
           </p>
         )}
       </div>

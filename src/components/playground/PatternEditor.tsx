@@ -10,6 +10,7 @@
  */
 import { useMemo } from "react";
 import { Button, Knob, SegmentedControl } from "@/components/controls";
+import { ExplainNote, HelpTip } from "@/components/guide/HelpTip";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
@@ -17,16 +18,18 @@ import { noteToName } from "@/lib/music/theory";
 import { strings } from "@/i18n";
 import type { NoteEvent } from "@/lib/schema/types";
 
+/** Grid fineness, described by how many squares a beat is cut into. */
 const RESOLUTIONS = [
-  { value: "2", label: "1/8" },
-  { value: "4", label: "1/16" },
-  { value: "8", label: "1/32" },
+  { value: "2", label: "1/8", hint: strings.playground.pattern.resolutionHints.eighth },
+  { value: "4", label: "1/16", hint: strings.playground.pattern.resolutionHints.sixteenth },
+  { value: "8", label: "1/32", hint: strings.playground.pattern.resolutionHints.thirtysecond },
 ];
 
+/** Pattern length in bars. The values are beats; the labels are bars. */
 const LENGTHS = [
-  { value: "4", label: "1" },
-  { value: "8", label: "2" },
-  { value: "16", label: "4" },
+  { value: "4", label: "1", hint: strings.playground.pattern.lengthHints.one },
+  { value: "8", label: "2", hint: strings.playground.pattern.lengthHints.two },
+  { value: "16", label: "4", hint: strings.playground.pattern.lengthHints.four },
 ];
 
 /** Pitch rows shown in the step grid, high to low. */
@@ -43,6 +46,7 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
   const selection = useUiStore((s) => s.selection);
   const setSelection = useUiStore((s) => s.setSelection);
   const positionBeats = useUiStore((s) => s.positionBeats);
+  const transportPlaying = useUiStore((s) => s.transportPlaying);
   const engineRef = useEngineRef();
 
   const baseNote = 60;
@@ -68,7 +72,11 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
 
   const { steps, stepBeats, byStep } = grid;
   const rows = Array.from({ length: ROW_COUNT }, (_, i) => baseNote + ROW_COUNT - 1 - i);
-  const playingStep = Math.floor((positionBeats % pattern.lengthBeats) / stepBeats);
+  // Only a running transport has a "current" step. When stopped, position
+  // is 0 and highlighting step 0 would read as a note that is not there.
+  const playingStep = transportPlaying
+    ? Math.floor((positionBeats % pattern.lengthBeats) / stepBeats)
+    : -1;
 
   const noteAt = (pitch: number, step: number): NoteEvent | undefined =>
     byStep.get(step)?.find((n) => n.pitch === pitch);
@@ -103,6 +111,10 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
           onChange={(e) => updatePattern(pattern.id, (p) => void (p.name = e.target.value || p.name))}
           className="material-sunken w-40 rounded-[var(--radius-control)] px-2 py-1 text-xs text-ink outline-none"
         />
+        <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.pattern.length}
+          <HelpTip term="pattern" placement="bottom" />
+        </label>
         <SegmentedControl
           label={strings.playground.pattern.length}
           options={LENGTHS}
@@ -110,6 +122,10 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
           size="sm"
           onChange={(value) => updatePattern(pattern.id, (p) => void (p.lengthBeats = Number(value)))}
         />
+        <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.pattern.resolution}
+          <HelpTip term="step" placement="bottom" />
+        </label>
         <SegmentedControl
           label={strings.playground.pattern.resolution}
           options={RESOLUTIONS}
@@ -158,6 +174,9 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-2">
+        <ExplainNote className="mb-2 max-w-lg">
+          {strings.playground.pattern.gridHint}
+        </ExplainNote>
         <table className="border-separate border-spacing-[2px]">
           <tbody>
             {rows.map((pitch) => (
@@ -174,7 +193,18 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
                   const isBeat = step % pattern.resolution === 0;
                   const isPlaying = step === playingStep;
                   return (
-                    <td key={step}>
+                    <td
+                      key={step}
+                      className="motion-ui"
+                      // The playing column is tinted across every row, so the
+                      // position in the bar is legible without hunting for a
+                      // one-pixel outline.
+                      style={
+                        isPlaying
+                          ? { background: "color-mix(in srgb, var(--accent) 22%, transparent)" }
+                          : undefined
+                      }
+                    >
                       <button
                         type="button"
                         aria-label={`${noteToName(pitch)} step ${step + 1}`}
@@ -187,11 +217,14 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
                               ? "border-edge-strong bg-surface-sunken"
                               : "border-edge bg-surface-raised"
                         } ${isPlaying ? "outline outline-1 outline-ink" : ""}`}
-                        style={
-                          note
-                            ? { opacity: 0.35 + (note.velocity / 127) * 0.65 }
-                            : undefined
-                        }
+                        style={{
+                          // Velocity is drawn as opacity: a soft note is a
+                          // faint square, which matches how it sounds.
+                          ...(note ? { opacity: 0.35 + (note.velocity / 127) * 0.65 } : {}),
+                          ...(note && isPlaying
+                            ? { boxShadow: "var(--halo-strong)", transform: "scale(1.08)" }
+                            : {}),
+                        }}
                       >
                         {offGrid && (
                           <span aria-hidden className="block text-[8px] leading-none text-accent-on">
@@ -207,7 +240,7 @@ export function PatternEditor({ patternId }: { patternId: string | null }) {
           </tbody>
         </table>
         <p className="mt-2 font-mono text-[10px] text-ink-faint">
-          * = note is off the current step grid; its exact timing is preserved.
+          {strings.playground.pattern.offGridHint}
         </p>
       </div>
     </div>

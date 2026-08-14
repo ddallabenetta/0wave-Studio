@@ -326,6 +326,8 @@ export const en = {
       addInstrument: "Instrument track",
       addAudio: "Audio track",
       rename: "Rename",
+      moveUp: "Move track up",
+      moveDown: "Move track down",
       duplicateTrack: "Duplicate track",
       deleteTrack: "Delete track",
       assignSound: "Assign sound",
@@ -351,9 +353,23 @@ export const en = {
       addPatternClip: "Add pattern clip",
       addAudioClip: "Add audio clip",
       addAudioClipHint: "Assign a sample sound to the track first",
+      addClipHint: "Double-click an instrument lane to drop a pattern there.",
       velocity: "Velocity",
       gate: "Gate",
       bars: "{n, plural, one {# bar} other {# bars}}",
+      gridHint:
+        "Click a square to place a note; click it again to remove it. Rows are pitches, columns are time, and the highlighted column is where playback is right now.",
+      offGridHint: "* = note is off the current step grid; its exact timing is preserved.",
+      lengthHints: {
+        one: "One bar — a short, repeating figure",
+        two: "Two bars — room for a small variation",
+        four: "Four bars — a full phrase",
+      },
+      resolutionHints: {
+        eighth: "Two squares per beat — broad and easy to place",
+        sixteenth: "Four squares per beat — the usual grid for beats",
+        thirtysecond: "Eight squares per beat — for fast rolls and detail",
+      },
     },
     inspector: {
       track: "Track",
@@ -410,7 +426,7 @@ export const en = {
       eyebrow: "Welcome",
       title: "Make a sound. Then make it a loop.",
       body:
-        "0wave Studio is a synthesizer and a small studio that runs in your browser. You do not need to read music, and nothing you do here can break anything. Pick a starting point.",
+        "This is a synthesizer and a small studio that runs in your browser. You do not need to read music, and nothing you do here can break anything. Pick a starting point.",
       pathSound: {
         title: "Design a sound",
         body: "Start from a kick, a pad or a bass and reshape it with four plain-language sliders.",

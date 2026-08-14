@@ -33,6 +33,13 @@ interface SeedTrack {
   /** Preset to play the part with, and the name the part takes. */
   preset: string;
   name: string;
+  /**
+   * Track fader position. Four parts at the default 0.8 sum past the
+   * master's headroom and light the clipping indicator on the very first
+   * play, which is a terrible first impression and teaches the wrong
+   * lesson. These are a balanced starting mix instead.
+   */
+  volume: number;
   notes: SeedNote[];
 }
 
@@ -52,6 +59,7 @@ const SEED: SeedTrack[] = [
   {
     preset: "Kick",
     name: "Kick",
+    volume: 0.62,
     notes: [0, 1, 2, 3].map((beat) => ({
       pitch: 60,
       startBeat: beat,
@@ -62,6 +70,7 @@ const SEED: SeedTrack[] = [
   {
     preset: "Snare",
     name: "Snare",
+    volume: 0.5,
     notes: [1, 3].map((beat) => ({
       pitch: 60,
       startBeat: beat,
@@ -72,6 +81,7 @@ const SEED: SeedTrack[] = [
   {
     preset: "Noise Perc",
     name: "Hats",
+    volume: 0.34,
     // Accented on the beat, softer off it, so the loop breathes.
     notes: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((beat, index) =>
       hat(beat, index % 2 === 0 ? 74 : 46),
@@ -80,6 +90,7 @@ const SEED: SeedTrack[] = [
   {
     preset: "Round Bass",
     name: "Bass",
+    volume: 0.5,
     notes: [
       { pitch: 40, startBeat: 0, durationBeats: 0.9, velocity: 104 },
       { pitch: 40, startBeat: 1.5, durationBeats: 0.4, velocity: 88 },
@@ -117,6 +128,9 @@ export function buildStarterLoop(): ID[] {
     const soundId = soundIdForPreset(seed.preset);
     const trackId = store.addTrack("instrument", soundId);
     store.renameTrack(trackId, seed.name);
+    store.updateTrack(trackId, (track) => {
+      track.volume = seed.volume;
+    });
 
     const patternId = store.addPattern(BEATS_PER_BAR, 4);
     store.updatePattern(patternId, (pattern) => {

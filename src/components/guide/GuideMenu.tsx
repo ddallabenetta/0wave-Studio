@@ -10,11 +10,14 @@
  */
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowCounterClockwise, CaretDown, Check, Lifebuoy, Path } from "@phosphor-icons/react";
 import { useGuideStore } from "@/lib/state/guide-store";
 import { strings } from "@/i18n";
 
 export function GuideMenu() {
+  const router = useRouter();
+  const pathname = usePathname();
   const explain = useGuideStore((s) => s.explain);
   const setExplain = useGuideStore((s) => s.setExplain);
   const startTour = useGuideStore((s) => s.startTour);
@@ -132,6 +135,10 @@ export function GuideMenu() {
             role="menuitem"
             onClick={() => {
               close();
+              // Three of the four stops point at Studio elements. Starting
+              // the tour from the Playground would spotlight nothing, so go
+              // to where the tour actually is.
+              if (!pathname.startsWith("/studio")) router.push("/studio");
               startTour();
             }}
             className={itemClass}

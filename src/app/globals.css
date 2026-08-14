@@ -439,9 +439,14 @@
   100% { opacity: 1; transform: scale(1); }
 }
 
+/* Opacity is part of the keyframes, not a hover rule: a sheen driven by a
+   static `opacity: 1` on :hover/:focus-visible stays visible as a frozen
+   band once the animation ends, which is exactly what it must not do. */
 @keyframes owave-sheen {
-  from { transform: translateX(-130%) skewX(-14deg); }
-  to { transform: translateX(240%) skewX(-14deg); }
+  0% { transform: translateX(-130%) skewX(-14deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(240%) skewX(-14deg); opacity: 0; }
 }
 
 /* Expanding halo, used by record / live indicators. */
@@ -569,7 +574,6 @@
 
   .sheen:hover::after,
   .sheen:focus-visible::after {
-    opacity: 1;
     animation: owave-sheen 820ms var(--ease-out-expo);
   }
 
