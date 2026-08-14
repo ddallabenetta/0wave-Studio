@@ -4,6 +4,15 @@ The Playground turns sounds prepared in the Studio into patterns and
 arrangements. It does not duplicate the synthesizer editor: deep sound editing
 happens in the Studio, one click away via `Edit in Studio`.
 
+## Empty state
+
+With no tracks, the Playground replaces the timeline with an offer rather
+than an empty grid: **Build me a starting loop** creates four tracks, four
+patterns and a four-bar loop (see `lib/presets/starterLoop.ts`), and
+**I'll start from an empty track** does the manual thing. An empty
+arrangement asks for a track, a sound, a pattern, a clip and a set of notes
+before it makes any sound at all, which is where a newcomer stops.
+
 ## Layout
 
 ```

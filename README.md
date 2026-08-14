@@ -2,6 +2,12 @@
 
 A web synthesizer with an essential DAW environment. Build sounds in the **Studio**, compose with them in the **Playground**.
 
+It is meant to be usable without a background in music: the first run offers
+three real starting points (design a sound, build a loop, or look around),
+every term of art carries a one-sentence explanation you can switch off, and
+an empty Playground will build you a four-bar loop to press play on. See
+`docs/GUIDANCE.md`.
+
 ## Design Read
 
 > Reading this as: a desktop-first creative audio instrument for musicians and curious sound designers, divided into two focused environments: Studio for building sounds and Playground for composing with them. The visual language is minimal, industrial and tactile, inspired by compact music hardware without copying any specific product.
@@ -30,6 +36,7 @@ src/
   app/                  Next.js App Router routes (/studio, /playground)
   components/
     shell/              Top bar, Start Audio gate, app shell
+    guide/              Onboarding, guided tour, plain-language hints
     controls/           Shared tactile controls (knob, fader, toggle…)
     studio/             Synth, Record, Import, Sample Editor, Library
     playground/         Transport, tracks, timeline, editors, mixer
@@ -38,7 +45,7 @@ src/
     schema/             Versioned project schema + zod validation + migrations
     state/              Zustand stores (serializable project, UI-only state)
     persistence/        IndexedDB repo, autosave, import/export, access modes
-    presets/            Curated system presets
+    presets/            Curated system presets and the starter loop
     music/              Note/frequency math, quantization, swing
   i18n/                 Centralized UI strings (en, it)
 supabase/migrations/    SQL migrations + RLS policies
@@ -48,6 +55,8 @@ docs/                   Architecture, decisions, engine, deployment…
 ## Hard rules (enforced by review)
 
 - No fake controls: every UI control drives real engine or store state.
+- Every user-facing string lives in `src/i18n`, in both dictionaries.
+- Motion is defined in `globals.css` and degrades under `prefers-reduced-motion`.
 - No `AudioNode` in serializable state; no React re-render at audio rate.
 - One `AudioContext`, created/resumed only from a user gesture.
 - Pattern Editor and Piano Roll edit the same `NoteEvent` model.
@@ -62,6 +71,7 @@ docs/                   Architecture, decisions, engine, deployment…
 | `docs/AUDIO-ENGINE.md` | Clock, scheduling, signal path, voice management |
 | `docs/STUDIO.md` | Modes, synth editor, recording, import, sample editing |
 | `docs/PLAYGROUND.md` | Transport, tracks, timeline, both note editors |
+| `docs/GUIDANCE.md` | Onboarding, glossary, hints, tour, motion system |
 | `docs/PIANO-ROLL.md` | Interaction contract for the piano roll |
 | `docs/PROJECT-SCHEMA.md` | Versioned schema and validation boundaries |
 | `docs/DEPLOYMENT.md` | Vercel, Supabase, access modes, production checklist |

@@ -39,12 +39,18 @@ export function Spinner() {
   );
 }
 
+/**
+ * Filled variants carry a `sheen`: a single light sweep on hover. It is
+ * reserved for the two variants that are already solid blocks of colour —
+ * on a raised or ghost button there is no fill for the light to travel
+ * across, and the effect just looks like a glitch.
+ */
 export function variantClass(variant: ButtonVariant, interactive: boolean): string {
   switch (variant) {
     case "primary":
-      return `bg-accent text-accent-on ${
+      return `bg-accent text-accent-on motion-ui ${
         interactive
-          ? "shadow-[var(--shadow-ambient)] hover:bg-accent-hover active:translate-y-px active:bg-accent-pressed active:shadow-none"
+          ? "sheen shadow-[var(--shadow-ambient)] hover:bg-accent-hover active:translate-y-px active:bg-accent-pressed active:shadow-none"
           : "shadow-none"
       }`;
     case "default":
@@ -52,13 +58,13 @@ export function variantClass(variant: ButtonVariant, interactive: boolean): stri
         ? "material-raised motion-ui text-ink hover:border-edge-strong"
         : "border border-edge bg-surface-raised text-ink";
     case "danger":
-      return `bg-record text-accent-on ${
+      return `bg-record text-accent-on motion-ui ${
         interactive
-          ? "shadow-[var(--shadow-ambient)] hover:brightness-95 active:translate-y-px active:brightness-90 active:shadow-none"
+          ? "sheen shadow-[var(--shadow-ambient)] hover:brightness-95 active:translate-y-px active:brightness-90 active:shadow-none"
           : "shadow-none"
       }`;
     case "ghost":
-      return `bg-transparent text-ink-soft ${
+      return `bg-transparent text-ink-soft motion-ui ${
         interactive ? "hover:bg-surface hover:text-ink active:translate-y-px" : ""
       }`;
   }

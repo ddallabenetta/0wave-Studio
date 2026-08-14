@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import { Plus, Copy, Trash, ArrowUp, ArrowDown, PencilSimple } from "@phosphor-icons/react";
 import { Button, Fader, IconButton } from "@/components/controls";
+import { HelpTip } from "@/components/guide/HelpTip";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { strings } from "@/i18n";
@@ -43,8 +44,9 @@ export function TrackList() {
   return (
     <div className="flex h-full flex-col border-r border-edge bg-surface">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-edge px-2">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">
+        <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-faint">
           {strings.playground.inspector.track}
+          <HelpTip term="track" placement="bottom" />
         </span>
         <div className="flex gap-1">
           <Button size="sm" icon={<Plus size={12} weight="bold" />} onClick={() => addTrack("instrument")}>
@@ -56,7 +58,7 @@ export function TrackList() {
         </div>
       </div>
 
-      <ul className="min-h-0 flex-1 overflow-y-auto">
+      <ul className="stagger min-h-0 flex-1 overflow-y-auto">
         {tracks.length === 0 && (
           <li className="p-4 text-xs leading-relaxed text-ink-faint">
             {strings.playground.tracks.addTrack}
@@ -68,13 +70,23 @@ export function TrackList() {
             <li
               key={track.id}
               style={{ height: TRACK_ROW_HEIGHT }}
-              className={`flex items-center gap-2 border-b border-edge px-2 ${selected ? "bg-accent-wash" : ""}`}
+              className={`motion-ui flex items-center gap-2 border-b border-edge px-2 ${
+                selected ? "bg-accent-wash" : "hover:bg-surface-raised/50"
+              }`}
               onPointerDown={() => setSelection({ kind: "track", trackId: track.id })}
             >
+              {/* The track's colour token is its identity across the track
+                  list, the timeline and the editors. Selecting a track
+                  thickens and lights its stripe rather than recolouring it. */}
               <span
                 aria-hidden
-                className="h-10 w-1 rounded-full"
-                style={{ background: `var(--${track.colorToken})` }}
+                className="motion-ui rounded-full"
+                style={{
+                  background: `var(--${track.colorToken})`,
+                  height: selected ? 44 : 40,
+                  width: selected ? 4 : 3,
+                  boxShadow: selected ? `0 0 8px -1px var(--${track.colorToken})` : "none",
+                }}
               />
 
               {/* Two lines: identity and actions on top, mix below, so the
@@ -144,7 +156,7 @@ export function TrackList() {
                     onClick={() => duplicateTrack(track.id)}
                   />
                   <IconButton
-                    aria-label="Move track up"
+                    aria-label={strings.playground.tracks.moveUp}
                     size="sm"
                     variant="ghost"
                     icon={<ArrowUp size={11} />}
@@ -152,7 +164,7 @@ export function TrackList() {
                     onClick={() => reorderTracks(index, index - 1)}
                   />
                   <IconButton
-                    aria-label="Move track down"
+                    aria-label={strings.playground.tracks.moveDown}
                     size="sm"
                     variant="ghost"
                     icon={<ArrowDown size={11} />}

@@ -16,6 +16,8 @@
  */
 import { useCallback, useEffect, useRef } from "react";
 import { Pad2D, SegmentedControl, Slider } from "@/components/controls";
+import { ExplainNote, HelpTip } from "@/components/guide/HelpTip";
+import type { TermId } from "@/components/guide/HelpTip";
 import { Panel } from "./Panel";
 import { useSynthBinding } from "./useSynthBinding";
 import { useEngineRef } from "@/components/hooks/useEngine";
@@ -33,11 +35,15 @@ import type { MacroId } from "@/lib/audio/macros";
 import { strings } from "@/i18n";
 import type { Waveform } from "@/lib/schema/types";
 
-const WAVEFORMS: { value: Waveform; label: string }[] = [
-  { value: "sine", label: "Sin" },
-  { value: "triangle", label: "Tri" },
-  { value: "sawtooth", label: "Saw" },
-  { value: "square", label: "Sqr" },
+/**
+ * Waveform names are abbreviations of abbreviations. The hint says what
+ * each one sounds like, which is the only thing a newcomer can act on.
+ */
+const WAVEFORMS: { value: Waveform; label: string; hint: string }[] = [
+  { value: "sine", label: "Sin", hint: strings.studio.waveHints.sine },
+  { value: "triangle", label: "Tri", hint: strings.studio.waveHints.triangle },
+  { value: "sawtooth", label: "Saw", hint: strings.studio.waveHints.sawtooth },
+  { value: "square", label: "Sqr", hint: strings.studio.waveHints.square },
 ];
 
 const PREVIEW_NOTE = 60;
@@ -61,6 +67,22 @@ const MACRO_DEFAULTS: Record<MacroId, number> = {
   vivace: 0.5,
   body: 0.62,
   space: 0.42,
+};
+
+/** Glossary entry behind each macro's "?" affordance. */
+const MACRO_TERMS: Record<MacroId, TermId> = {
+  punch: "attack",
+  vivace: "lfo",
+  body: "cutoff",
+  space: "reverb",
+};
+
+/** The sentence shown under each slider while hints are on. */
+const MACRO_HINTS: Record<MacroId, string> = {
+  punch: strings.studio.macroHints.punch,
+  vivace: strings.studio.macroHints.vivace,
+  body: strings.studio.macroHints.body,
+  space: strings.studio.macroHints.space,
 };
 
 /** Named ends of each slider range, shown under the track. */
@@ -152,15 +174,18 @@ export function BasicSynthPanel({ soundId }: { soundId: string | null }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Panel title={strings.studio.sections.character}>
+      <Panel title={strings.studio.sections.character} term="waveform" hint={strings.studio.pad.hint}>
         <div className="flex flex-col gap-3 p-3">
-          <SegmentedControl
-            label={strings.synth.waveform}
-            options={WAVEFORMS}
-            value={state.osc1.waveform}
-            size="sm"
-            onChange={(w) => apply([{ path: "osc1.waveform", value: w }])}
-          />
+          <div className="flex items-center gap-2">
+            <SegmentedControl
+              label={strings.synth.waveform}
+              options={WAVEFORMS}
+              value={state.osc1.waveform}
+              size="sm"
+              onChange={(w) => apply([{ path: "osc1.waveform", value: w }])}
+            />
+            <HelpTip term="waveform" placement="bottom" />
+          </div>
           <Pad2D
             label={strings.studio.pad.title}
             xLabel={strings.studio.pad.xLabel}
@@ -173,8 +198,10 @@ export function BasicSynthPanel({ soundId }: { soundId: string | null }) {
         </div>
       </Panel>
 
-      {/* Character sliders: standalone rows outside the card. */}
-      <div className="flex flex-col">
+      {/* Character sliders: standalone rows outside the card. Each carries
+          its own glossary tip, because "Punch" and "Body" are only obvious
+          once you already know what they change. */}
+      <div data-tour="shape" className="flex flex-col">
         {SLIDER_ORDER.map((id) => {
           const ends = MACRO_ENDS[id];
           return (
@@ -184,12 +211,14 @@ export function BasicSynthPanel({ soundId }: { soundId: string | null }) {
             >
               <Slider
                 label={MACRO_LABELS[id]}
+                help={<HelpTip term={MACRO_TERMS[id]} />}
                 value={readMacro(state, id)}
                 defaultValue={MACRO_DEFAULTS[id]}
                 minLabel={ends.min}
                 maxLabel={ends.max}
                 onChange={(v) => apply(applyMacro(id, v))}
               />
+              <ExplainNote className="mt-1.5">{MACRO_HINTS[id]}</ExplainNote>
             </div>
           );
         })}

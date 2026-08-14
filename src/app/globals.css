@@ -73,6 +73,32 @@
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* --- Motion system ------------------------------------------------
+   * One curve vocabulary for the whole product, so nothing animates in a
+   * dialect of its own:
+   *   --ease-out-expo  things arriving / settling (the default)
+   *   --ease-spring    things that should feel physical (pop-in, thumbs)
+   *   --ease-in-out    things that travel both ways (sliding indicators)
+   *   --ease-linear    continuous loops (sheen, drift, meters)
+   * Durations are a scale, not free numbers: 1 is a state flip, 5 is an
+   * ambient loop nobody should consciously notice.
+   */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 520ms;
+  --dur-5: 900ms;
+
+  /* Accent glow used by live/active controls. Two steps so a control can
+     get brighter while it is actually being touched. */
+  --halo: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  --halo-strong:
+    0 0 0 3px color-mix(in srgb, var(--accent) 34%, transparent),
+    0 0 18px -2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 /*
@@ -230,6 +256,9 @@
   --radius-clip: var(--radius-clip);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-spring: var(--ease-spring);
+  --ease-in-out: var(--ease-in-out);
 }
 
 /* --- Base ---------------------------------------------------------
@@ -259,6 +288,37 @@
 
   ::selection {
     background: var(--accent-wash);
+  }
+
+  /* Slim, themed scrollbars. The default chrome-grey bar reads as a browser
+     artifact sitting on top of the instrument; this one is part of it. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--edge-strong) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-clip: padding-box;
+    background-color: var(--edge-strong);
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ink-faint);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
@@ -313,15 +373,290 @@
     color: var(--display-ink);
   }
 
+  /* Glass: a translucent raised surface for floating chrome (dialogs,
+     popovers, coach marks) that lets the ambient light behind it through. */
+  .material-glass {
+    background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid color-mix(in srgb, var(--edge) 80%, transparent);
+    box-shadow:
+      inset 0 1px 0 var(--bevel-light),
+      0 12px 32px -8px rgba(0, 0, 0, 0.28),
+      0 2px 8px -2px rgba(0, 0, 0, 0.16);
+  }
+
   /* --- Motion ------------------------------------------------------*/
   /* Short, functional transitions only. Nothing scroll-driven. */
   @media (prefers-reduced-motion: no-preference) {
     .motion-ui {
       transition:
-        transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
-        opacity 120ms cubic-bezier(0.16, 1, 0.3, 1),
-        background-color 120ms linear,
-        border-color 120ms linear;
+        transform var(--dur-1) var(--ease-out-expo),
+        opacity var(--dur-1) var(--ease-out-expo),
+        background-color var(--dur-1) linear,
+        border-color var(--dur-1) linear,
+        box-shadow var(--dur-2) var(--ease-out-expo);
     }
+  }
+}
+
+/* --- Animation library ---------------------------------------------
+ * Every named animation the product uses lives here, so motion stays a
+ * shared vocabulary instead of thirty ad-hoc inline keyframes. Names are
+ * prefixed to avoid collisions with Tailwind's own.
+ *
+ * Rules of the house:
+ *  - entrances are ≤ --dur-4 and use `both` fill, so a killed animation
+ *    still leaves the element in its final state;
+ *  - looping animations are ambient only (never the sole carrier of
+ *    information) and are all disabled under prefers-reduced-motion;
+ *  - nothing animates layout properties; transform/opacity/filter only.
+ */
+
+@keyframes owave-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes owave-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes owave-rise-sm {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes owave-slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Slight overshoot: the thing lands like an object, not a fade. */
+@keyframes owave-pop {
+  0% { opacity: 0; transform: scale(0.94); }
+  62% { opacity: 1; transform: scale(1.014); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Opacity is part of the keyframes, not a hover rule: a sheen driven by a
+   static `opacity: 1` on :hover/:focus-visible stays visible as a frozen
+   band once the animation ends, which is exactly what it must not do. */
+@keyframes owave-sheen {
+  0% { transform: translateX(-130%) skewX(-14deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(240%) skewX(-14deg); opacity: 0; }
+}
+
+/* Expanding halo, used by record / live indicators. */
+@keyframes owave-ring {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+@keyframes owave-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes owave-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes owave-spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* Ambient light fields behind overlays. Two curves so two orbs never
+   travel in lockstep. */
+@keyframes owave-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(6%, -8%, 0) scale(1.12); }
+  66% { transform: translate3d(-5%, 5%, 0) scale(0.94); }
+}
+
+@keyframes owave-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.04); }
+  40% { transform: translate3d(-8%, 6%, 0) scale(0.92); }
+  75% { transform: translate3d(5%, 7%, 0) scale(1.1); }
+}
+
+@keyframes owave-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* Draws an SVG path on. Pair with stroke-dasharray/-dashoffset. */
+@keyframes owave-trace {
+  to { stroke-dashoffset: 0; }
+}
+
+/* One-shot flash for confirmations (a sound was added, a beat was built). */
+@keyframes owave-flash {
+  0% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+@layer components {
+  /* Entrances. */
+  .anim-fade { animation: owave-fade var(--dur-3) var(--ease-out-expo) both; }
+  .anim-rise { animation: owave-rise var(--dur-4) var(--ease-out-expo) both; }
+  .anim-rise-sm { animation: owave-rise-sm var(--dur-2) var(--ease-out-expo) both; }
+  .anim-slide-in { animation: owave-slide-in var(--dur-3) var(--ease-out-expo) both; }
+  .anim-pop { animation: owave-pop var(--dur-3) var(--ease-spring) both; }
+
+  /* Staggered children: lists, card grids, control rows. Capped at 12 —
+     past that the last item waits long enough to feel broken. */
+  .stagger > * { animation: owave-rise var(--dur-4) var(--ease-out-expo) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger > *:nth-child(8) { animation-delay: 280ms; }
+  .stagger > *:nth-child(9) { animation-delay: 320ms; }
+  .stagger > *:nth-child(10) { animation-delay: 360ms; }
+  .stagger > *:nth-child(11) { animation-delay: 400ms; }
+  .stagger > *:nth-child(n + 12) { animation-delay: 440ms; }
+
+  /* Ambient loops. */
+  .anim-breathe { animation: owave-breathe 3.2s var(--ease-in-out) infinite; }
+  .anim-bob { animation: owave-bob 2.4s var(--ease-in-out) infinite; }
+  .anim-spin-slow { animation: owave-spin-slow 14s linear infinite; }
+  .anim-flash { animation: owave-flash var(--dur-5) var(--ease-out-expo) both; }
+
+  /* Expanding halo behind a live dot. The parent must be relative. */
+  .anim-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    animation: owave-ring 1.8s var(--ease-out-expo) infinite;
+    pointer-events: none;
+  }
+
+  /* Loading placeholder that reads as "working", not "broken". */
+  .anim-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 20%,
+      color-mix(in srgb, var(--accent) 22%, transparent) 50%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+    animation: owave-shimmer 1.6s linear infinite;
+  }
+
+  /* Light sweep across a filled surface on hover. Decorative only. */
+  .sheen {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sheen::after {
+    content: "";
+    position: absolute;
+    inset: -20% -10%;
+    background: linear-gradient(
+      100deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.34) 50%,
+      transparent 62%
+    );
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sheen:hover::after,
+  .sheen:focus-visible::after {
+    animation: owave-sheen 820ms var(--ease-out-expo);
+  }
+
+  /* Cards and rows that answer to the pointer. */
+  .hover-lift {
+    transition:
+      transform var(--dur-2) var(--ease-out-expo),
+      box-shadow var(--dur-2) var(--ease-out-expo),
+      border-color var(--dur-2) linear;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--bevel-light),
+      0 6px 18px -6px rgba(0, 0, 0, 0.3);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0);
+    transition-duration: var(--dur-1);
+  }
+
+  /* Accent halo for controls that are being touched or are live. */
+  .glow-accent { box-shadow: var(--halo); }
+  .glow-accent-strong { box-shadow: var(--halo-strong); }
+
+  /* Drifting light field behind overlays and hero surfaces. Sized and
+     coloured by the component; this only supplies the motion and blur. */
+  .ambient-orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(56px);
+    opacity: 0.5;
+    pointer-events: none;
+    will-change: transform;
+    animation: owave-drift-a 18s var(--ease-in-out) infinite;
+  }
+
+  .ambient-orb-b {
+    animation: owave-drift-b 23s var(--ease-in-out) infinite;
+  }
+
+  /* Fine film grain. Keeps large flat surfaces from looking like plastic.
+     Applied to a positioned ancestor; never intercepts the pointer. */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.4;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.22'/></svg>");
+    mix-blend-mode: soft-light;
+  }
+
+  /* Accent-to-glow text fill for the few display-scale headings. */
+  .text-gradient {
+    background: linear-gradient(96deg, var(--accent-ink), var(--accent-glow));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+/*
+ * Reduced motion: one global switch rather than per-rule guards, so a
+ * component added later cannot forget to opt out. Entrances keep their
+ * final state (fill: both + a 1ms duration), loops stop after one pass.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ambient-orb,
+  .anim-ring::after,
+  .anim-shimmer {
+    animation: none !important;
   }
 }

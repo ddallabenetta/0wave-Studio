@@ -163,7 +163,16 @@ export const Knob = forwardRef<HTMLDivElement, KnobProps>(function Knob(props, r
           <path
             d={arcPath(c, c, arcR, MIN_ANGLE, angle)}
             fill="none"
-            style={{ stroke: "var(--accent)" }}
+            style={{
+              stroke: "var(--accent)",
+              // The filled arc lights up while the knob is being worked, so
+              // the one control under the pointer is unmistakable in a panel
+              // of twenty identical ones.
+              filter: interacting
+                ? "drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent))"
+                : "none",
+              transition: "filter var(--dur-2) var(--ease-out-expo)",
+            }}
             strokeWidth={STROKE}
             strokeLinecap="round"
           />
@@ -185,7 +194,9 @@ export const Knob = forwardRef<HTMLDivElement, KnobProps>(function Knob(props, r
             className={
               disabled
                 ? "h-full w-full rounded-full border border-edge bg-surface-raised"
-                : "material-raised motion-ui h-full w-full rounded-full"
+                : `material-raised motion-ui h-full w-full rounded-full ${
+                    drag.dragging ? "glow-accent" : ""
+                  }`
             }
           >
             <span
@@ -197,10 +208,14 @@ export const Knob = forwardRef<HTMLDivElement, KnobProps>(function Knob(props, r
       </div>
 
       <div className="flex h-4 items-center justify-center">
+        {/* Keyed so the label→value swap cross-fades rather than snapping;
+            the readout is the only feedback for an exact number. */}
         <span
-          className={`font-mono text-[10px] leading-4 ${
+          key={interacting ? "value" : "label"}
+          className={`anim-fade whitespace-nowrap font-mono text-[10px] leading-4 ${
             interacting ? "text-accent" : "text-ink-faint"
           }`}
+          style={{ animationDuration: "var(--dur-1)" }}
         >
           {interacting ? valueText : label}
         </span>

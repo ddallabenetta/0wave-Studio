@@ -4,7 +4,7 @@
  * Playground: tracks, arrangement, and the two note editors over one
  * canonical pattern model. Sound design stays in the Studio.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDown, CaretUp, MusicNotes, SlidersHorizontal, Sparkle } from "@phosphor-icons/react";
 import { Button, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
@@ -12,6 +12,9 @@ import { useUiStore } from "@/lib/state/ui-store";
 import { SoundLibraryPanel } from "@/components/studio/SoundLibraryPanel";
 import { RightPanel } from "@/components/studio/RightPanel";
 import { AIConnectorPanel } from "@/components/ai/AIConnectorPanel";
+import { HelpTip } from "@/components/guide/HelpTip";
+import { buildStarterLoop } from "@/lib/presets/starterLoop";
+import { PlaygroundEmptyState } from "./PlaygroundEmptyState";
 import { Transport } from "./Transport";
 import { TrackList } from "./TrackList";
 import { Timeline } from "./Timeline";
@@ -49,7 +52,32 @@ export function PlaygroundRoot() {
   const rightOpen = useUiStore((s) => s.playgroundRightOpen);
   const setRightOpen = useUiStore((s) => s.setPlaygroundRightOpen);
 
+  const addTrack = useProjectStore((s) => s.addTrack);
+
   const [pixelsPerBeat, setPixelsPerBeat] = useState(32);
+  /** Confirmation shown after the starter loop is built, then retired. */
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+  }, []);
+
+  const showNotice = (message: string) => {
+    setNotice(message);
+    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 6000);
+  };
+
+  const buildStarter = () => {
+    const [firstTrackId] = buildStarterLoop();
+    if (firstTrackId) setSelection({ kind: "track", trackId: firstTrackId });
+    // The starter loop creates its patterns; open the first one so the
+    // editor below the timeline is showing something real.
+    const [firstPattern] = useProjectStore.getState().project.patterns;
+    if (firstPattern) setActivePatternId(firstPattern.id);
+    showNotice(strings.playground.starter.done);
+  };
 
   /** Target of the AI Connector: the selected track's sound (ADR-005: tracks
    * reference soundId, so patching it live-updates the track). */
@@ -100,9 +128,36 @@ export function PlaygroundRoot() {
     if (patterns[0]) setActivePatternId(patterns[0].id);
   }, [activePatternId, patterns, setActivePatternId]);
 
+  /* Nothing to arrange yet: offer to build something real instead of
+     showing an empty grid the user has no way to fill. */
+  if (tracks.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Transport />
+        <PlaygroundEmptyState
+          onBuildStarter={buildStarter}
+          onAddEmptyTrack={() => {
+            const trackId = addTrack("instrument");
+            setSelection({ kind: "track", trackId });
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Transport />
+
+      {notice && (
+        <div
+          role="status"
+          className="anim-rise-sm flex items-center gap-2 border-b border-accent/25 bg-accent-wash px-3 py-1.5 text-[11px] text-ink-soft"
+        >
+          <Sparkle size={12} weight="fill" aria-hidden className="text-accent" />
+          {notice}
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1">
         <div className="w-[420px] shrink-0">
@@ -121,11 +176,13 @@ export function PlaygroundRoot() {
                 size="sm"
                 onChange={setEditor}
               />
+              <HelpTip term="pianoRoll" placement="top" />
+              <div className="h-4 w-px bg-edge" aria-hidden />
               <select
                 value={activePatternId ?? ""}
                 aria-label={strings.playground.editors.pattern}
                 onChange={(e) => setActivePatternId(e.target.value || null)}
-                className="material-sunken rounded-[var(--radius-control)] px-2 py-1 text-[11px] text-ink outline-none"
+                className="material-sunken motion-ui rounded-[var(--radius-control)] px-2 py-1 text-[11px] text-ink outline-none focus:shadow-[var(--halo)]"
               >
                 <option value="">{strings.playground.pattern.select}</option>
                 {patterns.map((pattern) => (
@@ -141,6 +198,7 @@ export function PlaygroundRoot() {
               >
                 {strings.playground.pattern.newPattern}
               </Button>
+              <HelpTip term="pattern" placement="top" />
               <Button
                 size="sm"
                 variant="ghost"

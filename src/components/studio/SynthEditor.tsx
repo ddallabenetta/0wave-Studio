@@ -9,7 +9,9 @@
  * are direct aliases of real parameters, so they stay reproducible and
  * savable. Advanced mode exposes everything.
  */
-import { Knob, SegmentedControl, Toggle } from "@/components/controls";
+import { WaveSine } from "@phosphor-icons/react";
+import { Button, Knob, SegmentedControl, Toggle } from "@/components/controls";
+import { HelpTip } from "@/components/guide/HelpTip";
 import { Panel, ControlRow } from "./Panel";
 import { EffectsSection } from "./EffectsSection";
 import { BasicSynthPanel } from "./BasicSynthPanel";
@@ -55,8 +57,9 @@ function OscillatorControls({
   return (
     <div className="material-sunken rounded-[var(--radius-control)] px-3 py-2">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+        <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
           {prefix === "osc1" ? strings.synth.osc1 : strings.synth.osc2}
+          <HelpTip term="oscillator" placement="bottom" />
         </span>
         <Toggle
           checked={osc.enabled}
@@ -148,16 +151,32 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
 
   if (!state) {
     return (
-      <Panel title={strings.synth.osc1}>
-        <p className="p-6 text-sm text-ink-faint">{strings.library.empty}</p>
-      </Panel>
+      <div className="anim-rise flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
+        <span
+          aria-hidden
+          className="anim-bob flex size-14 items-center justify-center rounded-full bg-accent-wash text-accent-ink"
+        >
+          <WaveSine size={26} weight="duotone" />
+        </span>
+        <h2 className="text-sm font-semibold text-ink">{strings.studio.emptyTitle}</h2>
+        <p className="max-w-xs text-[11px] leading-relaxed text-ink-faint">
+          {strings.studio.emptyBody}
+        </p>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => useUiStore.getState().setNewSoundDialogOpen(true)}
+        >
+          {strings.studio.newSound}
+        </Button>
+      </div>
     );
   }
 
   if (!advanced) {
     return (
       <div className="flex flex-col gap-3 overflow-y-auto p-3">
-        <Panel title={strings.studio.sections.preview}>
+        <Panel title={strings.studio.sections.preview} term="waveform">
           <div className="p-3">
             <WaveformPreview state={state} />
           </div>
@@ -168,15 +187,16 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 overflow-y-auto p-3">
-      <Panel title={strings.studio.sections.source}>
+    <div className="stagger flex flex-col gap-3 overflow-y-auto p-3">
+      <Panel title={strings.studio.sections.source} term="oscillator">
         <div className="flex flex-col gap-3 p-3">
           <OscillatorControls osc={state.osc1} prefix="osc1" set={set} advanced={advanced} />
           <OscillatorControls osc={state.osc2} prefix="osc2" set={set} advanced={advanced} />
           <div className="material-sunken rounded-[var(--radius-control)] px-3 py-2">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+              <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
                 {strings.synth.noise}
+                <HelpTip term="oscillator" placement="bottom" />
               </span>
               <Toggle
                 checked={state.noise.enabled}
@@ -234,7 +254,7 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
         </div>
       </Panel>
 
-      <Panel title={strings.studio.sections.shape}>
+      <Panel title={strings.studio.sections.shape} term="filter">
         <div className="flex flex-col gap-3 p-3">
           <ControlRow>
             <SegmentedControl
@@ -274,8 +294,9 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
           </ControlRow>
 
           <div className="material-sunken rounded-[var(--radius-control)] px-3 py-2">
-            <span className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+            <span className="mb-2 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
               {strings.synth.ampEnv}
+              <HelpTip term="envelope" placement="bottom" />
             </span>
             <ControlRow>
               <Knob label={strings.synth.attack} value={state.ampEnvelope.attack} min={0.001} max={10} logarithmic defaultValue={0.005} unit="ms" format={secs} size={40} onChange={(v) => set("ampEnvelope.attack", v)} />
@@ -286,8 +307,9 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
           </div>
 
           <div className="material-sunken rounded-[var(--radius-control)] px-3 py-2">
-            <span className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+            <span className="mb-2 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
               {strings.synth.filterEnv}
+              <HelpTip term="envelope" placement="bottom" />
             </span>
             <ControlRow>
               <Knob label={strings.synth.attack} value={state.filterEnvelope.attack} min={0.001} max={10} logarithmic defaultValue={0.005} unit="ms" format={secs} size={40} onChange={(v) => set("filterEnvelope.attack", v)} />
@@ -299,7 +321,7 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
         </div>
       </Panel>
 
-      <Panel title={strings.studio.sections.motion}>
+      <Panel title={strings.studio.sections.motion} term="lfo">
         <ControlRow className="p-3">
           <SegmentedControl
             label={strings.synth.waveform}
@@ -353,13 +375,13 @@ export function SynthEditor({ soundId }: { soundId: string | null }) {
         </ControlRow>
       </Panel>
 
-      <Panel title={strings.studio.sections.space}>
+      <Panel title={strings.studio.sections.space} term="reverb">
         <div className="p-3">
           <EffectsSection effects={state.effects} set={set} advanced={advanced} />
         </div>
       </Panel>
 
-      <Panel title={strings.studio.sections.output}>
+      <Panel title={strings.studio.sections.output} term="gain">
         <ControlRow className="p-3">
           <Knob
             label={strings.synth.gain}

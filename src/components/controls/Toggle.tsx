@@ -29,6 +29,14 @@ const LED_COLOR: Record<LedState, string> = {
   error: "bg-error",
 };
 
+/** Halo colour per state. `off` is deliberately absent: a dark LED is dark. */
+const LED_GLOW: Record<LedState, string | null> = {
+  on: "var(--success)",
+  off: null,
+  warning: "var(--warning)",
+  error: "var(--error)",
+};
+
 export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(function Toggle(props, ref) {
   const { checked, onChange, label, disabled = false, led, className } = props;
 
@@ -52,22 +60,39 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(function Toggle
         onClick={() => onChange(!checked)}
         className={trackClass}
       >
-        {/* Sliding square thumb. Position moves with the checked state. */}
+        {/* Sliding square thumb. Position moves with the checked state, and
+            the travel is animated so the switch reads as one object moving
+            rather than two states swapping. */}
         <span
           aria-hidden
           className="absolute left-[3px] top-1/2"
-          style={{ transform: `translate(${checked ? 16 : 0}px, -50%)` }}
+          style={{
+            transform: `translate(${checked ? 16 : 0}px, -50%)`,
+            transition: "transform var(--dur-2) var(--ease-spring)",
+          }}
         >
           <span
-            className={`block h-3.5 w-3.5 rounded-[var(--radius-clip)] ${
+            className={`motion-ui block h-3.5 w-3.5 rounded-[var(--radius-clip)] ${
               checked ? "bg-accent" : "bg-ink-faint"
             }`}
+            style={{ boxShadow: checked ? "var(--halo)" : "none" }}
           />
         </span>
       </button>
 
       <span className="flex items-center gap-1.5">
-        {led && <span aria-hidden className={`size-2 rounded-full ${LED_COLOR[led]}`} />}
+        {led && (
+          <span
+            aria-hidden
+            className={`motion-ui size-2 rounded-full ${LED_COLOR[led]}`}
+            style={{
+              // A lit LED glows in its own colour; an unlit one is inert.
+              boxShadow: LED_GLOW[led]
+                ? `0 0 7px -1px ${LED_GLOW[led]}, 0 0 2px 0 ${LED_GLOW[led]}`
+                : "none",
+            }}
+          />
+        )}
         <span className="text-sm text-ink">{label}</span>
       </span>
     </label>

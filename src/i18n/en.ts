@@ -7,6 +7,8 @@ export const en = {
   nav: {
     studio: "Studio",
     playground: "Playground",
+    studioHint: "Build and shape sounds",
+    playgroundHint: "Arrange your sounds into a loop",
   },
   login: {
     title: "Sign in to 0wave Studio",
@@ -18,10 +20,12 @@ export const en = {
       "Cloud mode needs Supabase credentials. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, or switch back to PUBLIC_LOCAL mode.",
   },
   audio: {
-    startTitle: "Start Audio",
+    startEyebrow: "0wave Studio",
+    startTitle: "Turn on the sound",
     startBody:
-      "Your browser requires a click before it can make sound. Press Start Audio to power the engine.",
-    startButton: "Start Audio",
+      "Browsers stay silent until you ask them to make noise. One click powers up the audio engine — after that everything you touch is audible straight away.",
+    startReassurance: "Nothing is recorded and your microphone stays off.",
+    startButton: "Turn on the sound",
     unsupported:
       "This browser does not support the Web Audio features 0wave Studio needs. Try a current version of Chrome, Edge, Firefox or Safari.",
     statusUninitialized: "Audio off",
@@ -40,18 +44,48 @@ export const en = {
       sample: "Sample Editor",
       library: "Sound Library",
     },
+    modeHints: {
+      synth: "Build a sound from nothing",
+      record: "Capture something with your microphone",
+      import: "Bring in an audio file from your computer",
+      sample: "Trim, tune and loop a recorded sound",
+      library: "Every sound in this project",
+    },
     useInPlayground: "Use in Playground",
     editInStudio: "Edit in Studio",
     initPatch: "Init Patch",
     duplicateBeforeEditing: "Duplicate before editing",
+    duplicateBeforeEditingHint:
+      "This sound is used by a track. Make a copy so you don't change how that track sounds.",
     saveSound: "Save Sound",
     saveAsNew: "Save as New",
     newSound: "New Sound",
-    newSoundTitle: "Create a new sound",
-    newSoundBody: "Pick a guided starting point — you can edit everything later.",
-    choosePreset: "Use this preset",
+    newSoundTitle: "Pick a sound to start from",
+    newSoundBody:
+      "Nothing here is final. Choose whatever sounds closest to what you want and shape it afterwards.",
+    choosePreset: "Start from this one",
+    surpriseMe: "Surprise me",
+    auditionHint: "Press a card's play button to hear it before you commit.",
     spaceHint: "SPACE: play the selected sound",
-    complexity: { basic: "Basic", advanced: "Advanced" },
+    editingLabel: "Editing",
+    emptyTitle: "No sound open",
+    emptyBody: "Pick one from the library on the left, or create a new one.",
+    simpleIntro:
+      "Four sliders and a pad. Each one moves several settings at once, the way a musician would move them together — you hear every change immediately.",
+    complexity: { basic: "Simple", advanced: "Full control" },
+    complexityHints: {
+      basic: "A handful of big controls in plain language",
+      advanced: "Every parameter of the synthesizer, laid out in signal order",
+    },
+    presetCategoryHints: {
+      percussive: "Short hits: kicks, snares, hats",
+      pad: "Long, soft chords that sit under everything",
+      bass: "Low sounds that carry the groove",
+      pluck: "Short, bright notes — keys, harps, plucks",
+      lead: "The sound that plays the melody on top",
+      texture: "Slow, evolving atmosphere",
+      blank: "An empty synth to build up yourself",
+    },
     sections: {
       source: "Source",
       shape: "Shape",
@@ -75,10 +109,23 @@ export const en = {
       body: { min: "Thin", max: "Full" },
       space: { min: "Dry", max: "Ambient" },
     },
+    macroHints: {
+      punch: "How hard the sound hits at the start. Snappy for drums, soft for anything that swells in.",
+      vivace: "How much the sound moves while it plays, instead of sitting still.",
+      body: "How much low end and weight the sound carries.",
+      space: "How much room is around the sound. Dry is right next to you, ambient is far away.",
+    },
+    waveHints: {
+      sine: "Soft and round, like a whistle",
+      triangle: "Hollow and gentle, a little brighter than sine",
+      sawtooth: "Buzzy and full — the classic synth sound",
+      square: "Hollow and reedy, like an old video game",
+    },
     pad: {
       title: "Character pad",
       xLabel: "Brightness",
       yLabel: "Movement",
+      hint: "Drag anywhere: right is brighter, up adds movement. Double-click to reset.",
     },
     waveformPreview: "Waveform",
     envelopePreview: "Envelope",
@@ -253,16 +300,34 @@ export const en = {
       stop: "Stop",
       toStart: "Return to start",
       bpm: "BPM",
-      metronome: "Metronome",
+      speed: "Speed",
+      metronome: "Click",
       swing: "Swing",
       countIn: "Count-in",
       loop: "Loop",
+      loopFrom: "Loop from",
+      loopTo: "Loop to",
+      position: "Position",
+    },
+    empty: {
+      title: "Nothing to play yet",
+      body:
+        "A song here is made of tracks. Each track plays one sound, following a pattern of notes. Let us set the first one up for you.",
+      action: "Build me a starting loop",
+      manual: "I'll start from an empty track",
+      hint: "You can change or delete everything afterwards.",
+    },
+    starter: {
+      building: "Setting up your loop…",
+      done: "Four tracks, four bars, ready to go. Press play.",
     },
     tracks: {
       addTrack: "Add Track",
       addInstrument: "Instrument track",
       addAudio: "Audio track",
       rename: "Rename",
+      moveUp: "Move track up",
+      moveDown: "Move track down",
       duplicateTrack: "Duplicate track",
       deleteTrack: "Delete track",
       assignSound: "Assign sound",
@@ -288,9 +353,23 @@ export const en = {
       addPatternClip: "Add pattern clip",
       addAudioClip: "Add audio clip",
       addAudioClipHint: "Assign a sample sound to the track first",
+      addClipHint: "Double-click an instrument lane to drop a pattern there.",
       velocity: "Velocity",
       gate: "Gate",
       bars: "{n, plural, one {# bar} other {# bars}}",
+      gridHint:
+        "Click a square to place a note; click it again to remove it. Rows are pitches, columns are time, and the highlighted column is where playback is right now.",
+      offGridHint: "* = note is off the current step grid; its exact timing is preserved.",
+      lengthHints: {
+        one: "One bar — a short, repeating figure",
+        two: "Two bars — room for a small variation",
+        four: "Four bars — a full phrase",
+      },
+      resolutionHints: {
+        eighth: "Two squares per beat — broad and easy to place",
+        sixteenth: "Four squares per beat — the usual grid for beats",
+        thirtysecond: "Eight squares per beat — for fast rolls and detail",
+      },
     },
     inspector: {
       track: "Track",
@@ -341,10 +420,168 @@ export const en = {
     collapse: "Collapse panel",
     expand: "Expand panel",
   },
+  guide: {
+    menu: "Guide",
+    welcome: {
+      eyebrow: "Welcome",
+      title: "Make a sound. Then make it a loop.",
+      body:
+        "This is a synthesizer and a small studio that runs in your browser. You do not need to read music, and nothing you do here can break anything. Pick a starting point.",
+      pathSound: {
+        title: "Design a sound",
+        body: "Start from a kick, a pad or a bass and reshape it with four plain-language sliders.",
+        action: "Open the sound picker",
+      },
+      pathBeat: {
+        title: "Build a loop",
+        body: "We create a track, a pattern and a four-bar loop. You press play and draw notes.",
+        action: "Set up a loop for me",
+      },
+      pathExplore: {
+        title: "Look around",
+        body: "Go straight in. Hints stay next to every technical word until you switch them off.",
+        action: "Just explore",
+      },
+      footnote: "You can reopen this any time from Guide in the top bar.",
+    },
+    explain: {
+      label: "Hints",
+      on: "Hints on",
+      off: "Hints off",
+      tooltip: "Show a plain-language explanation next to technical terms",
+    },
+    whatIsThis: "What does this do?",
+    tour: {
+      start: "Take the 4-step tour",
+      next: "Next",
+      done: "Got it",
+      skip: "Skip the tour",
+      step: "{n} of {total}",
+      library: {
+        title: "Your sounds live here",
+        body: "Every sound in the project is in this list. Click one to open it, press play to hear it.",
+      },
+      shape: {
+        title: "Shape it in plain words",
+        body: "Punch, Lively, Body and Space each move several synth settings at once. Drag one and listen — the sound updates as you move.",
+      },
+      hear: {
+        title: "Play it yourself",
+        body: "Use the on-screen keyboard, or your computer keys: A to L are the white notes, W E T Y U the black ones.",
+      },
+      arrange: {
+        title: "Then arrange it",
+        body: "The Playground turns your sounds into a loop: one track per sound, notes on a grid, press play.",
+      },
+    },
+    replayWelcome: "Show the welcome screen",
+  },
+  glossary: {
+    sound: {
+      term: "Sound",
+      plain: "One instrument. A kick drum, a bass, a pad — each is a separate sound you can reuse.",
+    },
+    synth: {
+      term: "Synth",
+      plain: "A sound the computer builds from scratch, rather than one that was recorded.",
+    },
+    sample: {
+      term: "Sample",
+      plain: "A recorded piece of audio used as an instrument.",
+    },
+    waveform: {
+      term: "Wave",
+      plain:
+        "The raw shape of the sound. Sine is soft and round, square is hollow, saw is buzzy and bright.",
+    },
+    oscillator: {
+      term: "Oscillator",
+      plain: "The part that actually produces the tone. Two of them layered sound fuller than one.",
+    },
+    filter: {
+      term: "Filter",
+      plain: "Removes part of the sound. Closing it is like putting a lid on: darker and further away.",
+    },
+    cutoff: {
+      term: "Brightness",
+      plain: "How much of the high end you keep. Low is muffled, high is crisp and present.",
+    },
+    resonance: {
+      term: "Resonance",
+      plain: "Emphasises the frequencies right at the filter's edge. A little adds bite, a lot whistles.",
+    },
+    envelope: {
+      term: "Envelope",
+      plain: "How a note behaves over its life: how fast it arrives, and how long it hangs around.",
+    },
+    attack: {
+      term: "Attack",
+      plain: "How long the note takes to reach full volume. Short is a hit, long is a swell.",
+    },
+    decay: { term: "Decay", plain: "How quickly the note settles after its initial peak." },
+    sustain: { term: "Sustain", plain: "The level a held note stays at while you keep the key down." },
+    release: { term: "Release", plain: "How long the sound keeps ringing after you let go." },
+    lfo: {
+      term: "Movement",
+      plain:
+        "A slow, repeating wobble applied to the sound — the difference between a flat note and a breathing one.",
+    },
+    detune: {
+      term: "Detune",
+      plain: "Nudges one layer slightly out of tune with the other. Small amounts sound rich, not wrong.",
+    },
+    reverb: { term: "Reverb", plain: "The sense of a room around the sound. More of it means further away." },
+    delay: { term: "Delay", plain: "An echo that repeats what you played, fading out each time." },
+    chorus: { term: "Chorus", plain: "Makes one instrument sound like several playing together." },
+    distortion: { term: "Drive", plain: "Pushes the sound until it breaks up. Adds grit and aggression." },
+    gain: { term: "Volume", plain: "How loud this sound is compared with everything else." },
+    velocity: {
+      term: "Velocity",
+      plain: "How hard a note is struck. Higher usually means louder and brighter.",
+    },
+    pan: { term: "Pan", plain: "Where the sound sits between the left and right speaker." },
+    bpm: {
+      term: "Speed",
+      plain: "Beats per minute — how fast the song runs. 90 is relaxed, 120 is pop, 140 is dance.",
+    },
+    swing: {
+      term: "Swing",
+      plain: "Delays every other note slightly so the rhythm loosens up instead of marching.",
+    },
+    metronome: { term: "Click", plain: "A steady tick on every beat, to keep you in time. Nobody hears it but you." },
+    loop: { term: "Loop", plain: "Plays a chosen section over and over, so you can work while it runs." },
+    track: { term: "Track", plain: "One lane of the song. Each track plays exactly one sound." },
+    pattern: {
+      term: "Pattern",
+      plain: "A short block of notes — usually one to four bars — that you can reuse anywhere.",
+    },
+    clip: { term: "Clip", plain: "One placement of a pattern on the timeline: where it starts and how long it runs." },
+    pianoRoll: {
+      term: "Piano roll",
+      plain: "A grid where height is pitch and width is length. Drawing a box plays a note.",
+    },
+    step: {
+      term: "Step",
+      plain: "One square of the rhythm grid. Sixteen steps is one bar at the usual resolution.",
+    },
+    octave: {
+      term: "Octave",
+      plain: "The same note, higher or lower. Up an octave sounds thinner, down sounds heavier.",
+    },
+    master: { term: "Master", plain: "The final mix — everything, summed together, on its way to your speakers." },
+    clipping: {
+      term: "Clipping",
+      plain: "The output is too loud and is distorting. Turn something down until the warning stops.",
+    },
+  },
   common: {
     cancel: "Cancel",
     confirm: "Confirm",
     close: "Close",
+    next: "Next",
+    back: "Back",
+    done: "Done",
+    dismiss: "Dismiss",
     on: "On",
     off: "Off",
     enabled: "Enabled",
