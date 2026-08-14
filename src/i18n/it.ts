@@ -13,6 +13,8 @@ export const it: typeof en = {
   nav: {
     studio: "Studio",
     playground: "Playground",
+    studioHint: "Crea e modella i suoni",
+    playgroundHint: "Componi un loop con i tuoi suoni",
   },
   login: {
     title: "Accedi a 0wave Studio",
@@ -24,10 +26,12 @@ export const it: typeof en = {
       "La modalità cloud richiede le credenziali Supabase. Aggiungi NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY, oppure torna alla modalità PUBLIC_LOCAL.",
   },
   audio: {
-    startTitle: "Avvia Audio",
+    startEyebrow: "0wave Studio",
+    startTitle: "Accendi il suono",
     startBody:
-      "Il browser richiede un clic prima di poter riprodurre suoni. Premi Avvia Audio per accendere il motore.",
-    startButton: "Avvia Audio",
+      "I browser restano muti finché non chiedi tu di fare rumore. Un clic accende il motore audio: da quel momento tutto quello che tocchi si sente subito.",
+    startReassurance: "Non registriamo nulla e il tuo microfono resta spento.",
+    startButton: "Accendi il suono",
     unsupported:
       "Questo browser non supporta le funzionalità Web Audio necessarie a 0wave Studio. Prova una versione recente di Chrome, Edge, Firefox o Safari.",
     statusUninitialized: "Audio spento",
@@ -46,18 +50,48 @@ export const it: typeof en = {
       sample: "Editor Campione",
       library: "Libreria Suoni",
     },
+    modeHints: {
+      synth: "Costruisci un suono dal nulla",
+      record: "Cattura qualcosa con il microfono",
+      import: "Porta dentro un file audio dal computer",
+      sample: "Taglia, intona e metti in loop un suono registrato",
+      library: "Tutti i suoni di questo progetto",
+    },
     useInPlayground: "Usa nel Playground",
     editInStudio: "Modifica nello Studio",
     initPatch: "Patch Iniziale",
     duplicateBeforeEditing: "Duplica prima di modificare",
+    duplicateBeforeEditingHint:
+      "Questo suono è usato da una traccia. Fanne una copia per non cambiare come suona quella traccia.",
     saveSound: "Salva Suono",
     saveAsNew: "Salva come Nuovo",
     newSound: "Nuovo Suono",
-    newSoundTitle: "Crea un nuovo suono",
-    newSoundBody: "Scegli un punto di partenza guidato — potrai modificare tutto in seguito.",
-    choosePreset: "Usa questo preset",
+    newSoundTitle: "Scegli da dove partire",
+    newSoundBody:
+      "Niente è definitivo. Prendi quello che assomiglia di più a ciò che hai in testa e modellalo dopo.",
+    choosePreset: "Parti da questo",
+    surpriseMe: "Sorprendimi",
+    auditionHint: "Premi il tasto play di una scheda per sentirla prima di sceglierla.",
     spaceHint: "SPAZIO: riproduci il suono selezionato",
-    complexity: { basic: "Base", advanced: "Avanzato" },
+    editingLabel: "In modifica",
+    emptyTitle: "Nessun suono aperto",
+    emptyBody: "Scegline uno dalla libreria a sinistra, oppure creane uno nuovo.",
+    simpleIntro:
+      "Quattro cursori e un pad. Ognuno muove più impostazioni insieme, come farebbe un musicista — e senti ogni cambiamento all'istante.",
+    complexity: { basic: "Semplice", advanced: "Controllo totale" },
+    complexityHints: {
+      basic: "Pochi controlli grandi, in parole semplici",
+      advanced: "Ogni parametro del sintetizzatore, in ordine di segnale",
+    },
+    presetCategoryHints: {
+      percussive: "Colpi corti: casse, rullanti, hi-hat",
+      pad: "Accordi lunghi e morbidi che stanno sotto a tutto",
+      bass: "Suoni bassi che reggono il groove",
+      pluck: "Note corte e brillanti — tastiere, arpe, pluck",
+      lead: "Il suono che porta la melodia, sopra a tutto",
+      texture: "Atmosfera lenta, in evoluzione",
+      blank: "Un synth vuoto da costruire da solo",
+    },
     sections: {
       source: "Sorgente",
       shape: "Forma",
@@ -81,10 +115,23 @@ export const it: typeof en = {
       body: { min: "Sottile", max: "Corposo" },
       space: { min: "Secco", max: "Spazioso" },
     },
+    macroHints: {
+      punch: "Quanto colpisce il suono all'inizio. Deciso per le percussioni, morbido per ciò che sale piano.",
+      vivace: "Quanto il suono si muove mentre suona, invece di restare fermo.",
+      body: "Quanti bassi e quanto peso porta con sé il suono.",
+      space: "Quanta stanza c'è attorno al suono. Secco è vicinissimo, spazioso è lontano.",
+    },
+    waveHints: {
+      sine: "Morbida e rotonda, come un fischio",
+      triangle: "Cava e gentile, un po' più brillante della sinusoide",
+      sawtooth: "Ruvida e piena — il classico suono da synth",
+      square: "Cava e nasale, come un vecchio videogioco",
+    },
     pad: {
       title: "Pad di carattere",
       xLabel: "Brillantezza",
       yLabel: "Movimento",
+      hint: "Trascina dove vuoi: a destra è più brillante, in alto aggiunge movimento. Doppio clic per azzerare.",
     },
     waveformPreview: "Forma d'onda",
     envelopePreview: "Inviluppo",
@@ -259,10 +306,26 @@ export const it: typeof en = {
       stop: "Stop",
       toStart: "Torna all'inizio",
       bpm: "BPM",
-      metronome: "Metronomo",
+      speed: "Velocità",
+      metronome: "Click",
       swing: "Swing",
       countIn: "Conteggio",
       loop: "Loop",
+      loopFrom: "Loop da",
+      loopTo: "Loop a",
+      position: "Posizione",
+    },
+    empty: {
+      title: "Non c'è ancora niente da suonare",
+      body:
+        "Qui un brano è fatto di tracce. Ogni traccia suona un suono seguendo un pattern di note. Lascia che prepariamo noi la prima.",
+      action: "Creami un loop di partenza",
+      manual: "Parto da una traccia vuota",
+      hint: "Potrai cambiare o cancellare tutto dopo.",
+    },
+    starter: {
+      building: "Sto preparando il loop…",
+      done: "Quattro tracce, quattro battute, pronto. Premi play.",
     },
     tracks: {
       addTrack: "Aggiungi Traccia",
@@ -347,10 +410,168 @@ export const it: typeof en = {
     collapse: "Comprimi pannello",
     expand: "Espandi pannello",
   },
+  guide: {
+    menu: "Guida",
+    welcome: {
+      eyebrow: "Benvenuto",
+      title: "Crea un suono. Poi trasformalo in un loop.",
+      body:
+        "0wave Studio è un sintetizzatore e un piccolo studio che gira nel browser. Non serve saper leggere la musica, e niente di quello che fai qui può rompere qualcosa. Scegli da dove partire.",
+      pathSound: {
+        title: "Progetta un suono",
+        body: "Parti da una cassa, un pad o un basso e rimodellalo con quattro cursori in parole semplici.",
+        action: "Apri la scelta dei suoni",
+      },
+      pathBeat: {
+        title: "Costruisci un loop",
+        body: "Creiamo noi traccia, pattern e loop di quattro battute. Tu premi play e disegni le note.",
+        action: "Preparami un loop",
+      },
+      pathExplore: {
+        title: "Dai un'occhiata",
+        body: "Entra direttamente. Gli aiuti restano accanto a ogni parola tecnica finché non li spegni.",
+        action: "Esploro e basta",
+      },
+      footnote: "Puoi riaprire questa schermata quando vuoi da Guida, in alto.",
+    },
+    explain: {
+      label: "Aiuti",
+      on: "Aiuti attivi",
+      off: "Aiuti spenti",
+      tooltip: "Mostra una spiegazione in parole semplici accanto ai termini tecnici",
+    },
+    whatIsThis: "A cosa serve?",
+    tour: {
+      start: "Fai il giro in 4 tappe",
+      next: "Avanti",
+      done: "Ho capito",
+      skip: "Salta il giro",
+      step: "{n} di {total}",
+      library: {
+        title: "Qui vivono i tuoi suoni",
+        body: "Ogni suono del progetto è in questa lista. Clicca per aprirlo, premi play per sentirlo.",
+      },
+      shape: {
+        title: "Modellalo a parole",
+        body: "Punch, Vivace, Corpo e Spazio muovono più impostazioni insieme. Trascinane uno e ascolta: il suono cambia mentre muovi.",
+      },
+      hear: {
+        title: "Suonalo tu",
+        body: "Usa la tastiera a schermo, o quella del computer: da A a L i tasti bianchi, W E T Y U i neri.",
+      },
+      arrange: {
+        title: "E poi montalo",
+        body: "Il Playground trasforma i tuoi suoni in un loop: una traccia per suono, le note su una griglia, e play.",
+      },
+    },
+    replayWelcome: "Mostra la schermata di benvenuto",
+  },
+  glossary: {
+    sound: {
+      term: "Suono",
+      plain: "Uno strumento. Una cassa, un basso, un pad: ognuno è un suono a sé che puoi riusare.",
+    },
+    synth: {
+      term: "Synth",
+      plain: "Un suono che il computer costruisce da zero, invece di uno registrato.",
+    },
+    sample: {
+      term: "Campione",
+      plain: "Un pezzo di audio registrato usato come strumento.",
+    },
+    waveform: {
+      term: "Onda",
+      plain:
+        "La forma grezza del suono. La sinusoide è morbida e rotonda, la quadra è cava, il dente di sega è ruvido e brillante.",
+    },
+    oscillator: {
+      term: "Oscillatore",
+      plain: "La parte che produce davvero il tono. Due sovrapposti suonano più pieni di uno solo.",
+    },
+    filter: {
+      term: "Filtro",
+      plain: "Toglie una parte del suono. Chiuderlo è come mettere un coperchio: più scuro e più lontano.",
+    },
+    cutoff: {
+      term: "Brillantezza",
+      plain: "Quanti acuti restano. In basso è ovattato, in alto è nitido e presente.",
+    },
+    resonance: {
+      term: "Risonanza",
+      plain: "Esalta le frequenze proprio al bordo del filtro. Poca dà mordente, tanta fischia.",
+    },
+    envelope: {
+      term: "Inviluppo",
+      plain: "Come si comporta una nota nella sua vita: quanto ci mette ad arrivare e quanto resta.",
+    },
+    attack: {
+      term: "Attacco",
+      plain: "Quanto ci mette la nota a raggiungere il volume pieno. Corto è un colpo, lungo è una salita.",
+    },
+    decay: { term: "Decadimento", plain: "Quanto in fretta la nota si assesta dopo il picco iniziale." },
+    sustain: { term: "Sustain", plain: "Il livello a cui resta una nota tenuta, finché tieni premuto." },
+    release: { term: "Rilascio", plain: "Quanto continua a suonare dopo che hai lasciato il tasto." },
+    lfo: {
+      term: "Movimento",
+      plain:
+        "Un'oscillazione lenta e ripetuta applicata al suono: la differenza tra una nota piatta e una che respira.",
+    },
+    detune: {
+      term: "Detune",
+      plain: "Scorda leggermente uno strato rispetto all'altro. Poco suona ricco, non stonato.",
+    },
+    reverb: { term: "Riverbero", plain: "La sensazione di una stanza attorno al suono. Più ce n'è, più sembra lontano." },
+    delay: { term: "Delay", plain: "Un eco che ripete quello che hai suonato, spegnendosi ogni volta." },
+    chorus: { term: "Chorus", plain: "Fa sembrare che a suonare siano in tanti invece di uno solo." },
+    distortion: { term: "Drive", plain: "Spinge il suono finché si rompe. Aggiunge grinta e aggressività." },
+    gain: { term: "Volume", plain: "Quanto è forte questo suono rispetto a tutto il resto." },
+    velocity: {
+      term: "Velocity",
+      plain: "Quanto forte è premuta una nota. Più alta di solito vuol dire più forte e più brillante.",
+    },
+    pan: { term: "Pan", plain: "Dove sta il suono tra la cassa di sinistra e quella di destra." },
+    bpm: {
+      term: "Velocità",
+      plain: "Battiti al minuto: quanto corre il brano. 90 è rilassato, 120 è pop, 140 è dance.",
+    },
+    swing: {
+      term: "Swing",
+      plain: "Ritarda leggermente una nota sì e una no, così il ritmo ondeggia invece di marciare.",
+    },
+    metronome: { term: "Click", plain: "Un tic regolare su ogni battito, per stare a tempo. Lo senti solo tu." },
+    loop: { term: "Loop", plain: "Ripete all'infinito un pezzo scelto, così puoi lavorarci mentre gira." },
+    track: { term: "Traccia", plain: "Una corsia del brano. Ogni traccia suona esattamente un suono." },
+    pattern: {
+      term: "Pattern",
+      plain: "Un blocco corto di note — di solito una-quattro battute — che puoi riusare ovunque.",
+    },
+    clip: { term: "Clip", plain: "Una collocazione del pattern sulla timeline: dove inizia e quanto dura." },
+    pianoRoll: {
+      term: "Piano roll",
+      plain: "Una griglia dove l'altezza è la nota e la larghezza è la durata. Disegnare un rettangolo suona una nota.",
+    },
+    step: {
+      term: "Step",
+      plain: "Un quadretto della griglia ritmica. Sedici step sono una battuta alla risoluzione tipica.",
+    },
+    octave: {
+      term: "Ottava",
+      plain: "La stessa nota, più acuta o più grave. Un'ottava sopra suona più sottile, sotto più pesante.",
+    },
+    master: { term: "Master", plain: "Il mix finale: tutto sommato insieme, in viaggio verso le casse." },
+    clipping: {
+      term: "Clipping",
+      plain: "L'uscita è troppo forte e distorce. Abbassa qualcosa finché l'avviso non sparisce.",
+    },
+  },
   common: {
     cancel: "Annulla",
     confirm: "Conferma",
     close: "Chiudi",
+    next: "Avanti",
+    back: "Indietro",
+    done: "Fatto",
+    dismiss: "Chiudi avviso",
     on: "On",
     off: "Off",
     enabled: "Attivo",

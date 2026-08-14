@@ -13,10 +13,16 @@
  * ±25%, Home min, End max.
  */
 import { useCallback, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { clamp } from "@/lib/music/theory";
 
 export interface SliderProps {
   label: string;
+  /**
+   * Slot beside the label, for a glossary tip. Kept generic so the control
+   * library stays independent of the guidance layer.
+   */
+  help?: ReactNode;
   /** Normalized 0..1 position. */
   value: number;
   onChange: (value: number) => void;
@@ -36,6 +42,7 @@ const NUDGE = 0.05;
 
 export function Slider({
   label,
+  help,
   value,
   onChange,
   defaultValue,
@@ -126,8 +133,9 @@ export function Slider({
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-ink-soft">
+        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft">
           {label}
+          {help}
         </span>
         <span
           className={`font-mono text-[11px] tabular-nums ${
@@ -161,11 +169,19 @@ export function Slider({
         style={{ touchAction: "none" }}
       >
         {/* Track */}
-        <div className="material-sunken absolute left-0 right-0 top-1/2 h-[6px] -translate-y-1/2 rounded-full">
-          {/* Fill */}
+        <div className="material-sunken absolute left-0 right-0 top-1/2 h-[6px] -translate-y-1/2 overflow-hidden rounded-full">
+          {/* Fill. A two-stop gradient rather than a flat accent, so the
+              travelled part of the track reads as an amount, not a state. */}
           <div
-            className="absolute left-0 top-0 h-full rounded-full bg-accent"
-            style={{ width: `${t * 100}%` }}
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{
+              width: `${t * 100}%`,
+              background: "linear-gradient(90deg, var(--accent-pressed), var(--accent))",
+              boxShadow: dragging
+                ? "0 0 10px -1px color-mix(in srgb, var(--accent) 75%, transparent)"
+                : "none",
+              transition: "box-shadow var(--dur-2) var(--ease-out-expo)",
+            }}
           />
           {/* Tick dots */}
           <div aria-hidden className="absolute inset-0 flex justify-between px-0.5">
@@ -186,9 +202,14 @@ export function Slider({
           style={{ left: `${t * 100}%`, transform: "translate(-50%, -50%)" }}
         >
           <div
-            className="h-4 w-[9px] rounded-[3px] border border-edge-strong bg-surface-raised motion-ui group-hover:bg-accent-wash"
+            className={`motion-ui h-4 w-[9px] rounded-[3px] border bg-surface-raised group-hover:bg-accent-wash ${
+              dragging ? "border-accent" : "border-edge-strong"
+            }`}
             style={{
-              boxShadow: dragging ? "0 0 0 3px var(--accent-pressed)" : "var(--shadow-ambient)",
+              boxShadow: dragging ? "var(--halo-strong)" : "var(--shadow-ambient)",
+              // Grows under the finger: the grabbed thumb is physically
+              // bigger than the one you are only hovering.
+              transform: dragging ? "scale(1.18)" : "none",
             }}
           />
         </div>

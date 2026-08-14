@@ -9,8 +9,19 @@
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Sparkle, Waveform } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  FileArrowUp,
+  Microphone,
+  Scissors,
+  Sparkle,
+  Stack,
+  WaveSine,
+  Waveform,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { Button, SegmentedControl } from "@/components/controls";
+import { ExplainNote } from "@/components/guide/HelpTip";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
@@ -27,17 +38,41 @@ import { AIConnectorPanel } from "@/components/ai/AIConnectorPanel";
 import { strings } from "@/i18n";
 import type { StudioMode, Complexity } from "@/lib/state/ui-store";
 
-const MODES: { value: StudioMode; label: string }[] = [
-  { value: "synth", label: strings.studio.modes.synth },
-  { value: "record", label: strings.studio.modes.record },
-  { value: "import", label: strings.studio.modes.import },
-  { value: "sample", label: strings.studio.modes.sample },
-  { value: "library", label: strings.studio.modes.library },
+/**
+ * Studio modes carry an icon and a plain-language hint. "Sample Editor"
+ * tells a newcomer nothing; "Trim, tune and loop a recorded sound" tells
+ * them whether it is the thing they are looking for.
+ */
+const MODE_META: { value: StudioMode; label: string; hint: string; icon: Icon }[] = [
+  { value: "synth", label: strings.studio.modes.synth, hint: strings.studio.modeHints.synth, icon: WaveSine },
+  { value: "record", label: strings.studio.modes.record, hint: strings.studio.modeHints.record, icon: Microphone },
+  { value: "import", label: strings.studio.modes.import, hint: strings.studio.modeHints.import, icon: FileArrowUp },
+  { value: "sample", label: strings.studio.modes.sample, hint: strings.studio.modeHints.sample, icon: Scissors },
+  { value: "library", label: strings.studio.modes.library, hint: strings.studio.modeHints.library, icon: Stack },
 ];
 
-const COMPLEXITY: { value: Complexity; label: string }[] = [
-  { value: "basic", label: strings.studio.complexity.basic },
-  { value: "advanced", label: strings.studio.complexity.advanced },
+const MODES = MODE_META.map(({ value, label, hint, icon: ModeIcon }) => ({
+  value,
+  hint,
+  label: (
+    <span className="flex items-center gap-1.5">
+      <ModeIcon size={13} weight="bold" aria-hidden />
+      {label}
+    </span>
+  ),
+}));
+
+const COMPLEXITY: { value: Complexity; label: string; hint: string }[] = [
+  {
+    value: "basic",
+    label: strings.studio.complexity.basic,
+    hint: strings.studio.complexityHints.basic,
+  },
+  {
+    value: "advanced",
+    label: strings.studio.complexity.advanced,
+    hint: strings.studio.complexityHints.advanced,
+  },
 ];
 
 export function StudioRoot() {
@@ -110,62 +145,86 @@ export function StudioRoot() {
 
   const showKeyboard = mode === "synth" || mode === "sample";
 
+  const activeMode = MODE_META.find((m) => m.value === mode);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-3 border-b border-edge bg-surface px-3 py-2">
-        <SegmentedControl label="Studio mode" options={MODES} value={mode} onChange={setMode} size="sm" />
-        {mode === "synth" && (
-          <SegmentedControl
-            label="Complexity"
-            options={COMPLEXITY}
-            value={complexity}
-            onChange={setComplexity}
-            size="sm"
-          />
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
-          {sound && (
-            <input
-              aria-label={strings.common.name}
-              value={sound.name}
-              onChange={(e) => renameSound(sound.id, e.target.value)}
-              className="material-sunken w-48 rounded-[var(--radius-control)] px-2 py-1 text-xs text-ink outline-none"
-            />
+      <div className="flex flex-col gap-2 border-b border-edge bg-surface px-3 py-2">
+        <div className="flex items-center gap-3">
+          <SegmentedControl label="Studio mode" options={MODES} value={mode} onChange={setMode} size="sm" />
+          {mode === "synth" && (
+            <>
+              <div className="h-5 w-px bg-edge" aria-hidden />
+              <SegmentedControl
+                label="Complexity"
+                options={COMPLEXITY}
+                value={complexity}
+                onChange={setComplexity}
+                size="sm"
+              />
+            </>
           )}
-          <Button size="sm" onClick={() => setNewSoundDialogOpen(true)}>
-            {strings.studio.newSound}
-          </Button>
-          {sound && (
+
+          <div className="ml-auto flex items-center gap-2">
+            {sound && (
+              <label className="flex items-center gap-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+                  {strings.studio.editingLabel}
+                </span>
+                <input
+                  aria-label={strings.common.name}
+                  value={sound.name}
+                  onChange={(e) => renameSound(sound.id, e.target.value)}
+                  className="material-sunken motion-ui w-48 rounded-[var(--radius-control)] px-2 py-1 text-xs text-ink outline-none focus:shadow-[var(--halo)]"
+                />
+              </label>
+            )}
+            <Button size="sm" onClick={() => setNewSoundDialogOpen(true)}>
+              {strings.studio.newSound}
+            </Button>
+            {sound && (
+              <Button
+                size="sm"
+                title={inUse ? strings.studio.duplicateBeforeEditingHint : undefined}
+                onClick={() => {
+                  const id = duplicateSound(sound.id);
+                  if (id) setEditingSoundId(id);
+                }}
+              >
+                {inUse ? strings.studio.duplicateBeforeEditing : strings.studio.saveAsNew}
+              </Button>
+            )}
             <Button
               size="sm"
+              variant="primary"
+              icon={<ArrowRight size={14} weight="bold" />}
+              disabled={!sound}
               onClick={() => {
-                const id = duplicateSound(sound.id);
-                if (id) setEditingSoundId(id);
+                if (!sound) return;
+                setPendingPlaygroundSound(sound.id);
+                router.push("/playground");
               }}
             >
-              {inUse ? strings.studio.duplicateBeforeEditing : strings.studio.saveAsNew}
+              {strings.studio.useInPlayground}
             </Button>
-          )}
-          <Button
-            size="sm"
-            variant="primary"
-            icon={<ArrowRight size={14} weight="bold" />}
-            disabled={!sound}
-            onClick={() => {
-              if (!sound) return;
-              setPendingPlaygroundSound(sound.id);
-              router.push("/playground");
-            }}
-          >
-            {strings.studio.useInPlayground}
-          </Button>
+          </div>
         </div>
+
+        {/* One line saying what this mode is for. Disappears with hints. */}
+        {activeMode && (
+          <ExplainNote key={mode} className="self-start">
+            {activeMode.hint}
+            {mode === "synth" && complexity === "basic" && ` — ${strings.studio.simpleIntro}`}
+          </ExplainNote>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1">
         {mode !== "library" && (
-          <aside className="w-[248px] shrink-0 border-r border-edge bg-base p-2">
+          <aside
+            data-tour="library"
+            className="w-[248px] shrink-0 border-r border-edge bg-base p-2"
+          >
             <SoundLibraryPanel />
           </aside>
         )}
@@ -178,7 +237,11 @@ export function StudioRoot() {
             {mode === "import" && <ImportPanel />}
             {mode === "library" && <SoundLibraryPanel variant="full" />}
           </div>
-          {showKeyboard && <Keyboard />}
+          {showKeyboard && (
+            <div data-tour="hear">
+              <Keyboard />
+            </div>
+          )}
         </div>
 
         <RightPanel

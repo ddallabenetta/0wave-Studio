@@ -13,6 +13,7 @@ import { useUiStore } from "@/lib/state/ui-store";
 import { useEngineRef } from "@/components/hooks/useEngine";
 import { loadSampleBuffer } from "./sampleBuffers";
 import { Panel } from "./Panel";
+import { PresetSparkline } from "./PresetSparkline";
 import { strings } from "@/i18n";
 import type { SoundDefinition } from "@/lib/schema/types";
 
@@ -109,15 +110,47 @@ export function SoundLibraryPanel({ variant = "panel" }: { variant?: "panel" | "
       </div>
 
       <ul className="min-h-0 flex-1 overflow-y-auto">
-        {visible.length === 0 && <li className="p-4 text-xs leading-relaxed text-ink-faint">{strings.library.empty}</li>}
+        {visible.length === 0 && (
+          <li className="anim-rise flex flex-col items-center gap-3 p-6 text-center">
+            <span
+              aria-hidden
+              className="flex size-10 items-center justify-center rounded-full bg-accent-wash text-accent-ink"
+            >
+              <MagnifyingGlass size={18} weight="duotone" />
+            </span>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{strings.library.empty}</p>
+            <Button size="sm" variant="primary" onClick={() => setNewSoundDialogOpen(true)}>
+              {strings.library.newSound}
+            </Button>
+          </li>
+        )}
         {visible.map((sound) => {
           const active = sound.id === editingSoundId;
           return (
             <li
               key={sound.id}
-              className={`border-b border-edge px-2 py-2 ${active ? "bg-accent-wash" : ""}`}
+              className={`motion-ui relative border-b border-edge px-2 py-2 ${
+                active ? "bg-accent-wash" : "hover:bg-surface-raised/50"
+              }`}
             >
-              <div className="flex items-center gap-1">
+              {/* Accent spine on the open sound: readable at a glance down a
+                  long list, and not carried by colour alone (the row is also
+                  washed and its name is marked aria-current). */}
+              <span
+                aria-hidden
+                className="motion-ui absolute inset-y-1 left-0 w-[3px] rounded-full bg-accent"
+                style={{ opacity: active ? 1 : 0, transform: active ? "none" : "scaleY(0.3)" }}
+              />
+              <div className="flex items-center gap-1.5">
+                {/* Thumbnail of the patch itself, so the list can be scanned
+                    by shape as well as by name. */}
+                {sound.type === "synth" && sound.synthState && (
+                  <PresetSparkline
+                    state={sound.synthState}
+                    active={active}
+                    className="h-6 w-9 shrink-0"
+                  />
+                )}
                 {renamingId === sound.id ? (
                   <input
                     autoFocus

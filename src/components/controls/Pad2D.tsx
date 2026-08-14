@@ -156,9 +156,56 @@ export function Pad2D({
         }`}
         style={{ height, touchAction: "none" }}
       >
-        {/* Crosshair guides. */}
-        <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-full w-px bg-ink/10" />
-        <div aria-hidden className="pointer-events-none absolute left-0 top-1/2 h-px w-full bg-ink/10" />
+        {/* Field wash. The surface itself shows what the axes mean: it
+            brightens towards the right (the X axis) and lifts towards the
+            top (the Y axis), so the corner you are heading for is legible
+            before you get there. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[var(--radius-control)]"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 15%, color-mix(in srgb, var(--accent) 14%, transparent) 100%), linear-gradient(0deg, transparent 30%, color-mix(in srgb, var(--accent-glow) 10%, transparent) 100%)",
+          }}
+        />
+
+        {/* Light that follows the point, so the pad glows where you left it. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[var(--radius-control)]"
+          style={{
+            background: `radial-gradient(120px circle at ${px}% ${100 - py}%, color-mix(in srgb, var(--accent) ${
+              dragging ? 30 : 18
+            }%, transparent), transparent 70%)`,
+            transition: "background var(--dur-2) linear",
+          }}
+        />
+
+        {/* Quarter grid: reference marks so a position can be remembered. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          {[25, 50, 75].map((offset) => (
+            <span
+              key={`v-${offset}`}
+              className="absolute top-0 h-full w-px"
+              style={{
+                left: `${offset}%`,
+                background: "var(--ink)",
+                opacity: offset === 50 ? 0.12 : 0.06,
+              }}
+            />
+          ))}
+          {[25, 50, 75].map((offset) => (
+            <span
+              key={`h-${offset}`}
+              className="absolute left-0 h-px w-full"
+              style={{
+                top: `${offset}%`,
+                background: "var(--ink)",
+                opacity: offset === 50 ? 0.12 : 0.06,
+              }}
+            />
+          ))}
+        </div>
 
         {/* Drag point. */}
         <div
@@ -167,11 +214,21 @@ export function Pad2D({
           className="pointer-events-none absolute"
           style={{ left: `${px}%`, top: `${100 - py}%`, transform: "translate(-50%, -50%)" }}
         >
+          {/* Halo pulses only while dragging: a live control, not decoration
+              on a control nobody is touching. */}
+          {dragging && (
+            <span className="anim-ring absolute inset-0 rounded-full text-accent" />
+          )}
           <div
-            className={`size-4 rounded-full border-2 ${
+            className={`motion-ui relative size-4 rounded-full border-2 ${
               dragging ? "border-accent-pressed bg-accent-pressed/40" : "border-accent bg-accent/25"
             }`}
-            style={{ boxShadow: "0 0 0 1px var(--surface-raised), var(--shadow-ambient)" }}
+            style={{
+              boxShadow: dragging
+                ? "0 0 0 1px var(--surface-raised), var(--halo-strong)"
+                : "0 0 0 1px var(--surface-raised), var(--shadow-ambient)",
+              transform: dragging ? "scale(1.15)" : "none",
+            }}
           />
         </div>
 

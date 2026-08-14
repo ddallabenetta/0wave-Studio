@@ -15,6 +15,13 @@ import type { ReactNode } from "react";
 export interface SegmentedOption<T extends string = string> {
   value: T;
   label: ReactNode;
+  /**
+   * One line explaining what the option is for, surfaced as the native
+   * tooltip. Segment labels are necessarily terse ("Synth", "Sample
+   * Editor"); this is where somebody who has never used a synthesizer
+   * finds out which one they want.
+   */
+  hint?: string;
   disabled?: boolean;
 }
 
@@ -116,7 +123,7 @@ export function SegmentedControl<T extends string = string>(
           ? "material-sunken font-semibold text-accent"
           : isDisabled
             ? "border border-edge bg-surface text-ink-faint"
-            : "material-raised motion-ui text-ink-soft hover:text-ink";
+            : "material-raised text-ink-soft hover:text-ink";
         return (
           <button
             key={opt.value}
@@ -129,14 +136,26 @@ export function SegmentedControl<T extends string = string>(
             aria-checked={selected}
             aria-disabled={isDisabled || undefined}
             disabled={isDisabled}
+            title={opt.hint}
             tabIndex={idx === tabbableIdx && !isDisabled ? 0 : -1}
             onClick={() => selectByIndex(idx)}
             onKeyDown={(e) => handleKeyDown(e, idx)}
-            className={`${padClass} rounded-[var(--radius-control)] ${classes} ${
+            className={`motion-ui relative overflow-hidden ${padClass} rounded-[var(--radius-control)] ${classes} ${
               isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
             }`}
           >
             {opt.label}
+            {/* Accent rule under the selected segment. Recessed material and
+                weight already carry the state; this adds the movement that
+                makes a switch feel like a switch. */}
+            <span
+              aria-hidden
+              className="motion-ui absolute inset-x-1 bottom-0 h-[2px] rounded-full bg-accent"
+              style={{
+                opacity: selected ? 1 : 0,
+                transform: selected ? "none" : "scaleX(0.3)",
+              }}
+            />
           </button>
         );
       })}

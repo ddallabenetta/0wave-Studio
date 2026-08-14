@@ -15,6 +15,9 @@ import { parseProject } from "@/lib/schema/migrations";
 import { localRepository } from "@/lib/persistence/local";
 import { startAutosave } from "@/lib/persistence/autosave";
 import { SYSTEM_PRESETS } from "@/lib/presets";
+import { useGuideStore } from "@/lib/state/guide-store";
+import { WelcomeOverlay } from "@/components/guide/WelcomeOverlay";
+import { TourGuide } from "@/components/guide/TourGuide";
 import { TopBar } from "./TopBar";
 import { StartAudioGate } from "./StartAudioGate";
 
@@ -95,15 +98,33 @@ function useUndoShortcuts() {
   }, []);
 }
 
+/**
+ * Read the persisted guidance preferences once, on the client. Doing this
+ * in an effect (never during render) keeps the server markup and the first
+ * client paint identical; until it runs, nothing that depends on stored
+ * state renders at all.
+ */
+function useGuideBootstrap() {
+  useEffect(() => {
+    useGuideStore.getState().hydrate();
+  }, []);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   useProjectBootstrap();
   useEngineBridge();
   useUndoShortcuts();
+  useGuideBootstrap();
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
       <TopBar />
       <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+      {/* Overlay order is the order of the decisions they ask for: turn the
+          sound on, then choose a starting point, then optionally be walked
+          through the interface. */}
       <StartAudioGate />
+      <WelcomeOverlay />
+      <TourGuide />
     </div>
   );
 }
