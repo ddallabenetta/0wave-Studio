@@ -81,6 +81,83 @@ describe("NoteEvent is the single canonical model", () => {
   });
 });
 
+describe("applyPatchToSound", () => {
+  it("merges only the groups present in the patch", () => {
+    const store = useProjectStore.getState();
+    const sound = createSynthSound("Bass");
+    store.addSound(sound);
+
+    store.applyPatchToSound(sound.id, { filter: { mode: "lowpass", cutoff: 420, resonance: 0.8 } });
+    const updated = useProjectStore.getState().project.sounds[0];
+
+    expect(updated.synthState?.filter.cutoff).toBe(420);
+    // Untouched groups survive untouched.
+    expect(updated.synthState?.osc1).toEqual(sound.synthState?.osc1);
+  });
+
+  it("is a single undoable mutation: undo reverts it, redo reapplies it", () => {
+    const store = useProjectStore.getState();
+    const sound = createSynthSound("Bass");
+    store.addSound(sound);
+    const pastBefore = useProjectStore.getState().past.length;
+    const originalCutoff = sound.synthState?.filter.cutoff;
+
+    store.applyPatchToSound(sound.id, { filter: { mode: "lowpass", cutoff: 150, resonance: 0.8 } });
+    expect(useProjectStore.getState().project.sounds[0].synthState?.filter.cutoff).toBe(150);
+    // One undoable entry, not one per group.
+    expect(useProjectStore.getState().past.length).toBe(pastBefore + 1);
+
+    store.undo();
+    expect(useProjectStore.getState().project.sounds[0].synthState?.filter.cutoff).toBe(originalCutoff);
+
+    store.redo();
+    expect(useProjectStore.getState().project.sounds[0].synthState?.filter.cutoff).toBe(150);
+  });
+
+  it("bumps the sound's updatedAt", () => {
+    const store = useProjectStore.getState();
+    const sound = createSynthSound("Bass");
+    store.addSound(sound);
+    // Pin the timestamp to a fixed past value so the bump is measurable
+    // rather than relying on millisecond timing.
+    useProjectStore.setState((s) => ({
+      project: {
+        ...s.project,
+        sounds: s.project.sounds.map((x) =>
+          x.id === sound.id ? { ...x, updatedAt: "2000-01-01T00:00:00.000Z" } : x,
+        ),
+      },
+    }));
+
+    store.applyPatchToSound(sound.id, { output: { gain: 0.5, velocitySensitivity: 0.6 } });
+
+    expect(useProjectStore.getState().project.sounds[0].updatedAt).not.toBe("2000-01-01T00:00:00.000Z");
+  });
+
+  it("does nothing for a missing sound", () => {
+    const store = useProjectStore.getState();
+    const projectBefore = useProjectStore.getState().project;
+
+    store.applyPatchToSound("missing", { filter: { mode: "lowpass", cutoff: 100, resonance: 0.8 } });
+
+    const after = useProjectStore.getState();
+    expect(after.project).toBe(projectBefore); // no mutation
+    expect(after.past).toHaveLength(0); // no undo entry
+    expect(after.dirty).toBe(false);
+  });
+
+  it("does nothing for a sound without synthState", () => {
+    const store = useProjectStore.getState();
+    const sample = { ...createSynthSound("S"), type: "sample" as const, synthState: undefined };
+    store.addSound(sample);
+    const projectBefore = useProjectStore.getState().project;
+
+    store.applyPatchToSound(sample.id, { filter: { mode: "lowpass", cutoff: 100, resonance: 0.8 } });
+
+    expect(useProjectStore.getState().project).toBe(projectBefore);
+  });
+});
+
 describe("tracks", () => {
   it("duplicates tracks with fresh clip ids", () => {
     const store = useProjectStore.getState();

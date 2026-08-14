@@ -32,7 +32,10 @@ export const adsrSchema: z.ZodType<AdsrState> = z.object({
   release: z.number().min(0).max(30),
 });
 
-const oscillatorSchema = z.object({
+// Exported (with oscillatorSchema, filterSchema and the group schemas below)
+// so lib/ai can validate the AI connector output against the same schemas
+// that guard persistence (ADR-009).
+export const oscillatorSchema = z.object({
   enabled: z.boolean(),
   waveform,
   octave: z.number().int().min(-4).max(4),
@@ -43,7 +46,7 @@ const oscillatorSchema = z.object({
   unisonSpreadCents: z.number().min(0).max(100),
 });
 
-const filterSchema = z.object({
+export const filterSchema = z.object({
   mode: filterMode,
   cutoff: z.number().min(20).max(20000),
   resonance: z.number().min(0.1).max(24),
@@ -86,25 +89,31 @@ export const effectsSchema = z
     "effects must follow EFFECT_ORDER",
   );
 
-const synthStateSchema = z.object({
+export const noiseSchema = z.object({ enabled: z.boolean(), color: unit });
+export const mixerSchema = z.object({ osc1: unit, osc2: unit, noise: unit });
+export const filterEnvAmountSchema = z.number().min(-1).max(1);
+export const lfoSchema = z.object({
+  waveform,
+  destination: z.enum(["pitch", "filter", "amplitude"]),
+  rate: z.number().min(0.01).max(40),
+  depth: unit,
+  sync: z.boolean(),
+  syncBeats: z.number().min(0.0625).max(16),
+});
+export const outputSchema = z.object({ gain: unit, velocitySensitivity: unit });
+
+export const synthStateSchema = z.object({
   osc1: oscillatorSchema,
   osc2: oscillatorSchema,
-  noise: z.object({ enabled: z.boolean(), color: unit }),
-  mixer: z.object({ osc1: unit, osc2: unit, noise: unit }),
+  noise: noiseSchema,
+  mixer: mixerSchema,
   filter: filterSchema,
   ampEnvelope: adsrSchema,
   filterEnvelope: adsrSchema,
-  filterEnvAmount: z.number().min(-1).max(1),
-  lfo: z.object({
-    waveform,
-    destination: z.enum(["pitch", "filter", "amplitude"]),
-    rate: z.number().min(0.01).max(40),
-    depth: unit,
-    sync: z.boolean(),
-    syncBeats: z.number().min(0.0625).max(16),
-  }),
+  filterEnvAmount: filterEnvAmountSchema,
+  lfo: lfoSchema,
   effects: effectsSchema,
-  output: z.object({ gain: unit, velocitySensitivity: unit }),
+  output: outputSchema,
 });
 
 const sampleStateSchema = z.object({

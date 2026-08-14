@@ -9,6 +9,10 @@ export type StudioMode = "synth" | "record" | "import" | "sample" | "library";
 export type PlaygroundEditor = "pattern" | "piano-roll" | "clip";
 export type Complexity = "basic" | "advanced";
 export type BottomPanel = "editor" | "closed";
+/** Tabs of the Studio right-side panel (Analyzer + AI Sound Connector). */
+export type StudioRightTab = "analyzer" | "ai";
+/** Tabs of the Playground right-side panel (Inspector + Library + AI Connector). */
+export type PlaygroundRightTab = "inspector" | "library" | "ai";
 
 export type Selection =
   | { kind: "track"; trackId: ID }
@@ -56,9 +60,16 @@ interface UiStoreState {
   setPlaygroundEditor(editor: PlaygroundEditor): void;
   bottomPanel: BottomPanel;
   setBottomPanel(panel: BottomPanel): void;
-  /** Drawer with the sound library inside the Playground. */
-  libraryDrawerOpen: boolean;
-  setLibraryDrawerOpen(open: boolean): void;
+
+  /* Right-side panels (collapsible, per section) */
+  studioRightTab: StudioRightTab;
+  setStudioRightTab(tab: StudioRightTab): void;
+  studioRightOpen: boolean;
+  setStudioRightOpen(open: boolean): void;
+  playgroundRightTab: PlaygroundRightTab;
+  setPlaygroundRightTab(tab: PlaygroundRightTab): void;
+  playgroundRightOpen: boolean;
+  setPlaygroundRightOpen(open: boolean): void;
 
   /* Piano roll */
   pianoRollSnap: number; // steps per beat
@@ -101,8 +112,15 @@ export const useUiStore = create<UiStoreState>()((set) => ({
   setPlaygroundEditor: (playgroundEditor) => set({ playgroundEditor }),
   bottomPanel: "editor",
   setBottomPanel: (bottomPanel) => set({ bottomPanel }),
-  libraryDrawerOpen: false,
-  setLibraryDrawerOpen: (libraryDrawerOpen) => set({ libraryDrawerOpen }),
+
+  studioRightTab: "analyzer",
+  setStudioRightTab: (studioRightTab) => set({ studioRightTab }),
+  studioRightOpen: true,
+  setStudioRightOpen: (studioRightOpen) => set({ studioRightOpen }),
+  playgroundRightTab: "inspector",
+  setPlaygroundRightTab: (playgroundRightTab) => set({ playgroundRightTab }),
+  playgroundRightOpen: true,
+  setPlaygroundRightOpen: (playgroundRightOpen) => set({ playgroundRightOpen }),
 
   pianoRollSnap: 4,
   setPianoRollSnap: (pianoRollSnap) => set({ pianoRollSnap }),

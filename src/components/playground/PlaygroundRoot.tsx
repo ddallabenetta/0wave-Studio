@@ -4,12 +4,14 @@
  * Playground: tracks, arrangement, and the two note editors over one
  * canonical pattern model. Sound design stays in the Studio.
  */
-import { useEffect, useState } from "react";
-import { CaretDown, CaretUp, MusicNotes } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
+import { CaretDown, CaretUp, MusicNotes, SlidersHorizontal, Sparkle } from "@phosphor-icons/react";
 import { Button, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { SoundLibraryPanel } from "@/components/studio/SoundLibraryPanel";
+import { RightPanel } from "@/components/studio/RightPanel";
+import { AIConnectorPanel } from "@/components/ai/AIConnectorPanel";
 import { Transport } from "./Transport";
 import { TrackList } from "./TrackList";
 import { Timeline } from "./Timeline";
@@ -18,7 +20,7 @@ import { PianoRoll } from "./PianoRoll";
 import { Inspector } from "./Inspector";
 import { usePlaybackSync } from "./usePlaybackSync";
 import { strings } from "@/i18n";
-import type { PlaygroundEditor } from "@/lib/state/ui-store";
+import type { PlaygroundEditor, PlaygroundRightTab } from "@/lib/state/ui-store";
 
 const EDITORS: { value: PlaygroundEditor; label: string }[] = [
   { value: "pattern", label: strings.playground.editors.pattern },
@@ -29,6 +31,7 @@ export function PlaygroundRoot() {
   usePlaybackSync();
 
   const patterns = useProjectStore((s) => s.project.patterns);
+  const tracks = useProjectStore((s) => s.project.tracks);
   const addPattern = useProjectStore((s) => s.addPattern);
 
   const pendingSoundId = useUiStore((s) => s.pendingPlaygroundSoundId);
@@ -39,11 +42,34 @@ export function PlaygroundRoot() {
   const setBottomPanel = useUiStore((s) => s.setBottomPanel);
   const activePatternId = useUiStore((s) => s.activePatternId);
   const setActivePatternId = useUiStore((s) => s.setActivePatternId);
+  const selection = useUiStore((s) => s.selection);
   const setSelection = useUiStore((s) => s.setSelection);
-  const drawerOpen = useUiStore((s) => s.libraryDrawerOpen);
-  const setDrawerOpen = useUiStore((s) => s.setLibraryDrawerOpen);
+  const rightTab = useUiStore((s) => s.playgroundRightTab);
+  const setRightTab = useUiStore((s) => s.setPlaygroundRightTab);
+  const rightOpen = useUiStore((s) => s.playgroundRightOpen);
+  const setRightOpen = useUiStore((s) => s.setPlaygroundRightOpen);
 
   const [pixelsPerBeat, setPixelsPerBeat] = useState(32);
+
+  /** Target of the AI Connector: the selected track's sound (ADR-005: tracks
+   * reference soundId, so patching it live-updates the track). */
+  const aiSoundId = useMemo(() => {
+    if (!selection || selection.kind === "note") return null;
+    const track = tracks.find((t) => t.id === selection.trackId);
+    return track?.soundId ?? null;
+  }, [selection, tracks]);
+
+  /** Toolbar "Sound Library" button: opens the library tab (or closes the
+   * panel when the library tab is already showing). */
+  const libraryActive = rightOpen && rightTab === "library";
+  const toggleLibrary = () => {
+    if (libraryActive) {
+      setRightOpen(false);
+    } else {
+      setRightTab("library");
+      setRightOpen(true);
+    }
+  };
 
   /* "Use in Playground": assign to a free track, or create one. */
   useEffect(() => {
@@ -115,7 +141,12 @@ export function PlaygroundRoot() {
               >
                 {strings.playground.pattern.newPattern}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setDrawerOpen(!drawerOpen)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className={libraryActive ? "text-accent-ink" : undefined}
+                onClick={toggleLibrary}
+              >
                 {strings.library.title}
               </Button>
               <Button
@@ -140,9 +171,39 @@ export function PlaygroundRoot() {
           </div>
         </div>
 
-        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-edge bg-base p-2">
-          {drawerOpen ? <SoundLibraryPanel /> : <Inspector />}
-        </aside>
+        <RightPanel<PlaygroundRightTab>
+          widthClass="w-[280px]"
+          tabs={[
+            {
+              value: "inspector",
+              label: strings.rightPanel.inspector,
+              icon: <SlidersHorizontal size={14} weight="bold" />,
+              content: <Inspector />,
+            },
+            {
+              value: "library",
+              label: strings.rightPanel.library,
+              icon: <MusicNotes size={14} weight="bold" />,
+              content: <SoundLibraryPanel />,
+            },
+            {
+              value: "ai",
+              label: strings.ai.title,
+              icon: <Sparkle size={14} weight="bold" />,
+              // Keyed by target so switching tracks resets connector state.
+              content: (
+                <AIConnectorPanel key={aiSoundId ?? "none"} soundId={aiSoundId} inPlayground />
+              ),
+            },
+          ]}
+          activeTab={rightTab}
+          onTabChange={(tab) => {
+            setRightTab(tab);
+            setRightOpen(true);
+          }}
+          open={rightOpen}
+          onOpenChange={setRightOpen}
+        />
       </div>
     </div>
   );

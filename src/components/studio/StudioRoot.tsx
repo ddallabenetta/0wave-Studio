@@ -9,7 +9,7 @@
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight, Sparkle, Waveform } from "@phosphor-icons/react";
 import { Button, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
@@ -22,6 +22,8 @@ import { SoundLibraryPanel } from "./SoundLibraryPanel";
 import { NewSoundDialog } from "./NewSoundDialog";
 import { Analyzer } from "./Analyzer";
 import { Keyboard } from "./Keyboard";
+import { RightPanel } from "./RightPanel";
+import { AIConnectorPanel } from "@/components/ai/AIConnectorPanel";
 import { strings } from "@/i18n";
 import type { StudioMode, Complexity } from "@/lib/state/ui-store";
 
@@ -48,6 +50,10 @@ export function StudioRoot() {
   const setEditingSoundId = useUiStore((s) => s.setEditingSoundId);
   const setPendingPlaygroundSound = useUiStore((s) => s.setPendingPlaygroundSound);
   const audioStatus = useUiStore((s) => s.audioStatus);
+  const studioRightTab = useUiStore((s) => s.studioRightTab);
+  const setStudioRightTab = useUiStore((s) => s.setStudioRightTab);
+  const studioRightOpen = useUiStore((s) => s.studioRightOpen);
+  const setStudioRightOpen = useUiStore((s) => s.setStudioRightOpen);
 
   const sounds = useProjectStore((s) => s.project.sounds);
   const tracks = useProjectStore((s) => s.project.tracks);
@@ -175,9 +181,37 @@ export function StudioRoot() {
           {showKeyboard && <Keyboard />}
         </div>
 
-        <aside className="w-[300px] shrink-0 overflow-hidden border-l border-edge bg-base p-2">
-          <Analyzer />
-        </aside>
+        <RightPanel
+          widthClass="w-[300px]"
+          tabs={[
+            {
+              value: "analyzer",
+              label: strings.rightPanel.analyzer,
+              icon: <Waveform size={14} weight="bold" />,
+              content: <Analyzer />,
+            },
+            {
+              value: "ai",
+              label: strings.ai.title,
+              icon: <Sparkle size={14} weight="bold" />,
+              // Keyed by target so switching sounds resets connector state.
+              content: (
+                <AIConnectorPanel
+                  key={editingSoundId ?? "none"}
+                  soundId={editingSoundId}
+                  inPlayground={false}
+                />
+              ),
+            },
+          ]}
+          activeTab={studioRightTab}
+          onTabChange={(tab) => {
+            setStudioRightTab(tab);
+            setStudioRightOpen(true);
+          }}
+          open={studioRightOpen}
+          onOpenChange={setStudioRightOpen}
+        />
       </div>
 
       <NewSoundDialog open={newSoundDialogOpen} onClose={() => setNewSoundDialogOpen(false)} />

@@ -17,9 +17,11 @@ import type {
   Pattern,
   Project,
   SoundDefinition,
+  SynthState,
   Track,
 } from "../schema/types";
 import { createEmptyProject, createId, createPattern, createTrack } from "../schema/factories";
+import { mergePatch } from "./mergePatch";
 
 const UNDO_LIMIT = 100;
 
@@ -57,6 +59,14 @@ interface ProjectStoreState {
   renameSound(id: ID, name: string): void;
   duplicateSound(id: ID): ID | null;
   deleteSound(id: ID): void;
+  /**
+   * Apply an AI patch proposal to a sound's synthState in ONE undoable
+   * mutation, so a single Undo reverts the whole apply (ADR-006). Only the
+   * groups present in the patch are merged; everything else is untouched.
+   * No-op (no store change, no undo entry) when the sound is missing or has
+   * no synthState.
+   */
+  applyPatchToSound(id: ID, patch: Partial<SynthState>): void;
 
   /* Tracks */
   addTrack(type?: Track["type"], soundId?: ID): ID;
@@ -214,6 +224,19 @@ export const useProjectStore = create<ProjectStoreState>()((set, get) => {
           if (track.soundId === id) track.soundId = undefined;
         }
       });
+    },
+    applyPatchToSound(id, patch) {
+      // Guard before mutating: a missing sound must not bump project.updatedAt
+      // or push an undo entry (mutate() touches the project unconditionally).
+      const sound = get().project.sounds.find((s) => s.id === id);
+      if (!sound?.synthState) return;
+      get().updateSound(
+        id,
+        (draft) => {
+          if (draft.synthState) draft.synthState = mergePatch(draft.synthState, patch);
+        },
+        { undoable: true },
+      );
     },
 
     addTrack(type = "instrument", soundId) {
@@ -376,3 +399,5 @@ export const selectPatterns = (s: ProjectStoreState) => s.project.patterns;
 export const selectTempo = (s: ProjectStoreState) => s.project.tempo;
 export const selectSwing = (s: ProjectStoreState) => s.project.swing;
 export const selectLoopRange = (s: ProjectStoreState) => s.project.loopRange;
+export const selectSoundById = (s: ProjectStoreState, id: ID) =>
+  s.project.sounds.find((sound) => sound.id === id);
