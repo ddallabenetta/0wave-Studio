@@ -18,6 +18,7 @@ import type {
   SynthState,
 } from "../schema/types";
 import type { AudioClipPlayback } from "./audioClips";
+import type { PreviewNote } from "./preview";
 
 /** Dot path into SynthState, e.g. "filter.cutoff", "osc1.waveform". */
 export type ParameterPath = string;
@@ -65,6 +66,18 @@ export interface IAudioEngine {
   assignSoundToTrack(trackId: ID, sound: SoundDefinition | null): void;
   setTrackMix(trackId: ID, volume: number, pan: number): void;
   setTrackMuteSolo(trackId: ID, mute: boolean, solo: boolean): void;
+  /** True when the track has an assigned sound able to play a note. */
+  trackHasSound(trackId: ID): boolean;
+
+  /**
+   * Audition notes through a track's own instrument, layered over whatever
+   * the transport is already playing. `notes` are positioned in beats from
+   * the start of the audition. Returns its length in seconds, or null when
+   * the track has no sound to play it with.
+   */
+  previewTrackNotes(trackId: ID, notes: PreviewNote[], tempo?: number): number | null;
+  /** Drop an audition's queued notes (sounding ones ring out). */
+  stopTrackPreview(trackId?: ID): void;
 
   /** Scheduling. Times are beats relative to transport position 0. */
   schedulePattern(trackId: ID, notes: NoteEvent[], startBeat: Beats, options?: {

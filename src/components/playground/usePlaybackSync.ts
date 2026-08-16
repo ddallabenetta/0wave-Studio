@@ -10,15 +10,22 @@
  *   (the scheduler holds one list per track) and reschedule on edits
  * - schedule audio clips through their track bus
  *
+ * Everything here is guarded on what actually changed. The project document
+ * is immutable, so a new `project` object arrives on every fader move, and
+ * naively reacting to it would dispose and rebuild each track's sound engine
+ * (cutting every ringing voice) and restart every audio clip several times a
+ * second while dragging. Identity comparison against what was last pushed is
+ * what keeps a mix tweak from interrupting the notes it is mixing.
+ *
  * Nothing here runs at audio rate: it reacts to store changes only.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useEngine } from "@/components/hooks/useEngine";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { loadSampleBuffer } from "@/components/studio/sampleBuffers";
 import type { IAudioEngine } from "@/lib/audio/api";
-import type { NoteEvent, Project, Track } from "@/lib/schema/types";
+import type { Clip, ID, NoteEvent, Project, SoundDefinition, Track } from "@/lib/schema/types";
 
 /**
  * Expand a track's pattern clips into a single note list positioned in
@@ -56,30 +63,116 @@ export function flattenTrackNotes(project: Project, track: Track): NoteEvent[] {
   return notes;
 }
 
+/**
+ * Everything about the arrangement's audio clips that changes what is heard.
+ * Rescheduling an audio clip restarts it, so it must happen when the clip
+ * changed — not when some other part of the project did.
+ */
+export function audioClipSignature(project: Project): string {
+  const parts: string[] = [
+    `t:${project.tempo}`,
+    `l:${project.loopRange.enabled}:${project.loopRange.startBeat}:${project.loopRange.endBeat}`,
+  ];
+  for (const track of project.tracks) {
+    for (const clip of track.clips) {
+      if (clip.kind !== "audio") continue;
+      parts.push(
+        [
+          track.id,
+          clip.id,
+          clip.assetId,
+          clip.startBeat,
+          clip.lengthBeats,
+          clip.offsetSeconds,
+          clip.gain,
+          clip.fadeIn,
+          clip.fadeOut,
+          clip.loopEnabled,
+          clip.loopStart,
+          clip.loopEnd,
+        ].join(":"),
+      );
+    }
+  }
+  return parts.join("|");
+}
+
+/** Mixer values last pushed to the engine, so unchanged ones are not re-sent. */
+interface MixSnapshot {
+  volume: number;
+  pan: number;
+  mute: boolean;
+  solo: boolean;
+}
+
 export function usePlaybackSync(): void {
   const engine = useEngine();
   const project = useProjectStore((s) => s.project);
   const playing = useUiStore((s) => s.transportPlaying);
+
+  /** Engine the caches below describe; a new one invalidates all of them. */
+  const syncedEngine = useRef<IAudioEngine | null>(null);
   const knownTracks = useRef<string[]>([]);
+  /** Sound object last assigned per track (immer identity = "unchanged"). */
+  const assignedSound = useRef(new Map<ID, SoundDefinition | null>());
+  const pushedMix = useRef(new Map<ID, MixSnapshot>());
+  /** Clip list last flattened per track, and the patterns it was read from. */
+  const scheduledFrom = useRef(new Map<ID, { clips: readonly Clip[]; patterns: Project["patterns"] }>());
 
   /* Track lifecycle, sound assignment, mixer values. */
   useEffect(() => {
     if (!engine) return;
+    // The engine is a singleton and normally outlives every mount, but if it
+    // were ever replaced these caches would describe nodes that no longer
+    // exist and the new engine would be left silent.
+    if (syncedEngine.current !== engine) {
+      syncedEngine.current = engine;
+      knownTracks.current = [];
+      assignedSound.current.clear();
+      pushedMix.current.clear();
+      scheduledFrom.current.clear();
+    }
     const currentIds = project.tracks.map((t) => t.id);
 
     for (const id of knownTracks.current) {
-      if (!currentIds.includes(id)) engine.removeTrackNode(id);
+      if (currentIds.includes(id)) continue;
+      engine.removeTrackNode(id);
+      assignedSound.current.delete(id);
+      pushedMix.current.delete(id);
+      scheduledFrom.current.delete(id);
     }
+
     for (const track of project.tracks) {
       if (!knownTracks.current.includes(track.id)) engine.createTrackNode(track.id);
-      const sound = track.soundId ? project.sounds.find((s) => s.id === track.soundId) ?? null : null;
-      engine.assignSoundToTrack(track.id, sound);
-      engine.setTrackMix(track.id, track.volume, track.pan);
-      engine.setTrackMuteSolo(track.id, track.mute, track.solo);
-      if (sound?.type === "sample" && sound.sampleState) {
-        const asset = project.assets.find((a) => a.id === sound.sampleState?.assetId);
-        if (asset) void loadSampleBuffer(engine, asset);
+
+      const sound = track.soundId
+        ? project.sounds.find((s) => s.id === track.soundId) ?? null
+        : null;
+      // Rebuild the track's sound engine only when the patch itself changed.
+      // Anything else here — a fader, a mute, a clip edit — must leave the
+      // ringing voices alone.
+      if (assignedSound.current.get(track.id) !== sound) {
+        assignedSound.current.set(track.id, sound);
+        engine.assignSoundToTrack(track.id, sound);
+        if (sound?.type === "sample" && sound.sampleState) {
+          const asset = project.assets.find((a) => a.id === sound.sampleState?.assetId);
+          if (asset) void loadSampleBuffer(engine, asset);
+        }
       }
+
+      const mix = pushedMix.current.get(track.id);
+      if (!mix || mix.volume !== track.volume || mix.pan !== track.pan) {
+        engine.setTrackMix(track.id, track.volume, track.pan);
+      }
+      if (!mix || mix.mute !== track.mute || mix.solo !== track.solo) {
+        engine.setTrackMuteSolo(track.id, track.mute, track.solo);
+      }
+      pushedMix.current.set(track.id, {
+        volume: track.volume,
+        pan: track.pan,
+        mute: track.mute,
+        solo: track.solo,
+      });
     }
     knownTracks.current = currentIds;
   }, [engine, project.tracks, project.sounds, project.assets]);
@@ -92,25 +185,33 @@ export function usePlaybackSync(): void {
     engine.setLoopRange(project.loopRange);
   }, [engine, project.tempo, project.swing, project.loopRange]);
 
-  /* Pattern scheduling: rebuild whenever notes, clips or patterns change. */
+  /* Pattern scheduling: rebuild the tracks whose clips or patterns changed. */
   useEffect(() => {
     if (!engine) return;
     for (const track of project.tracks) {
+      const previous = scheduledFrom.current.get(track.id);
+      if (previous && previous.clips === track.clips && previous.patterns === project.patterns) {
+        continue;
+      }
+      scheduledFrom.current.set(track.id, { clips: track.clips, patterns: project.patterns });
       engine.schedulePattern(track.id, flattenTrackNotes(project, track), 0);
     }
   }, [engine, project]);
 
-  /* Audio clips: (re)schedule the whole arrangement on play. */
+  /* Audio clips: (re)scheduled on play and whenever a clip actually changes. */
+  const clipSignature = useMemo(() => audioClipSignature(project), [project]);
   useEffect(() => {
     if (!engine || !playing) return;
     let cancelled = false;
-    void scheduleAudioClips(engine, project).then(() => {
+    // Read fresh state: the effect is keyed on the clip signature, not on the
+    // project object, so the closure's snapshot could be one edit behind.
+    void scheduleAudioClips(engine, useProjectStore.getState().project).then(() => {
       if (cancelled) engine.cancelAudioClips();
     });
     return () => {
       cancelled = true;
     };
-  }, [engine, playing, project]);
+  }, [engine, playing, clipSignature]);
 }
 
 /** How many transport loop passes of audio clips are scheduled ahead. */

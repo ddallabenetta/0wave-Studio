@@ -3,10 +3,18 @@
 /**
  * Playground: tracks, arrangement, and the two note editors over one
  * canonical pattern model. Sound design stays in the Studio.
+ *
+ * Three rules hold the section together:
+ *
+ * - a pattern is heard through the track it is placed on, so no view asks
+ *   which instrument to use (see patternTarget.ts);
+ * - every pattern is visible as a thumbnail before it is chosen, so the
+ *   picker is a strip of cards rather than a list of names;
+ * - the space bar is play/pause, the way it is in every other music tool.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDown, CaretUp, MusicNotes, SlidersHorizontal, Sparkle } from "@phosphor-icons/react";
-import { Button, SegmentedControl } from "@/components/controls";
+import { IconButton, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { SoundLibraryPanel } from "@/components/studio/SoundLibraryPanel";
@@ -19,9 +27,12 @@ import { Transport } from "./Transport";
 import { TrackList } from "./TrackList";
 import { Timeline } from "./Timeline";
 import { PatternEditor } from "./PatternEditor";
+import { PatternStrip } from "./PatternStrip";
 import { PianoRoll } from "./PianoRoll";
 import { Inspector } from "./Inspector";
+import { createPatternOnTrack, insertBeatFor } from "./clipPlacement";
 import { usePlaybackSync } from "./usePlaybackSync";
+import { useTransportControls } from "./useTransportControls";
 import { strings } from "@/i18n";
 import type { PlaygroundEditor, PlaygroundRightTab } from "@/lib/state/ui-store";
 
@@ -30,12 +41,14 @@ const EDITORS: { value: PlaygroundEditor; label: string }[] = [
   { value: "piano-roll", label: strings.playground.editors.pianoRoll },
 ];
 
+/** Height of the open note editor. */
+const EDITOR_HEIGHT = 300;
+
 export function PlaygroundRoot() {
   usePlaybackSync();
 
   const patterns = useProjectStore((s) => s.project.patterns);
   const tracks = useProjectStore((s) => s.project.tracks);
-  const addPattern = useProjectStore((s) => s.addPattern);
 
   const pendingSoundId = useUiStore((s) => s.pendingPlaygroundSoundId);
   const setPendingPlaygroundSound = useUiStore((s) => s.setPendingPlaygroundSound);
@@ -53,6 +66,7 @@ export function PlaygroundRoot() {
   const setRightOpen = useUiStore((s) => s.setPlaygroundRightOpen);
 
   const addTrack = useProjectStore((s) => s.addTrack);
+  const { toggle, ready } = useTransportControls();
 
   const [pixelsPerBeat, setPixelsPerBeat] = useState(32);
 
@@ -90,6 +104,28 @@ export function PlaygroundRoot() {
     showNotice(strings.playground.starter.done);
   };
 
+  /**
+   * Space is play/pause, as it is in every DAW. It is claimed for the whole
+   * section — including while a step button has focus, where the browser
+   * would otherwise re-toggle that step — and released only to text fields
+   * and selects, where space is a character or a menu.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space" || event.repeat) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const element = event.target as HTMLElement | null;
+      const tag = element?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || element?.isContentEditable) {
+        return;
+      }
+      event.preventDefault();
+      if (ready) toggle();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [ready, toggle]);
+
   /** Target of the AI Connector: the selected track's sound (ADR-005: tracks
    * reference soundId, so patching it live-updates the track). */
   const aiSoundId = useMemo(() => {
@@ -97,18 +133,6 @@ export function PlaygroundRoot() {
     const track = tracks.find((t) => t.id === selection.trackId);
     return track?.soundId ?? null;
   }, [selection, tracks]);
-
-  /** Toolbar "Sound Library" button: opens the library tab (or closes the
-   * panel when the library tab is already showing). */
-  const libraryActive = rightOpen && rightTab === "library";
-  const toggleLibrary = () => {
-    if (libraryActive) {
-      setRightOpen(false);
-    } else {
-      setRightTab("library");
-      setRightOpen(true);
-    }
-  };
 
   /* "Use in Playground": assign to a free track, or create one. */
   useEffect(() => {
@@ -136,8 +160,29 @@ export function PlaygroundRoot() {
   /* Keep an active pattern selected so the editors always have a target. */
   useEffect(() => {
     if (activePatternId && patterns.some((p) => p.id === activePatternId)) return;
-    if (patterns[0]) setActivePatternId(patterns[0].id);
+    setActivePatternId(patterns[0]?.id ?? null);
   }, [activePatternId, patterns, setActivePatternId]);
+
+  /**
+   * A new pattern is created where it will play: on the selected track, at
+   * the playhead. A pattern with no home has no instrument, which is the
+   * confusion this whole section is built to avoid.
+   */
+  const createPattern = () => {
+    const state = useProjectStore.getState();
+    const selected = useUiStore.getState().selection;
+    const selectedTrack =
+      selected && selected.kind !== "note"
+        ? state.project.tracks.find((t) => t.id === selected.trackId && t.type === "instrument")
+        : undefined;
+    const track = selectedTrack ?? state.project.tracks.find((t) => t.type === "instrument");
+    const trackId = track?.id ?? state.addTrack("instrument");
+    const position = useUiStore.getState().positionBeats;
+    const created = createPatternOnTrack(trackId, insertBeatFor(track, position));
+    setActivePatternId(created.patternId);
+    setSelection({ kind: "pattern-clip", trackId, clipId: created.clipId });
+    setBottomPanel("editor");
+  };
 
   /* Nothing to arrange yet: offer to build something real instead of
      showing an empty grid the user has no way to fill. */
@@ -171,7 +216,7 @@ export function PlaygroundRoot() {
       )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="w-[420px] shrink-0">
+        <div className="w-[360px] shrink-0">
           <TrackList
             scrollRef={trackScrollRef}
             onScroll={() => mirrorScroll(trackScrollRef.current, laneScrollRef.current)}
@@ -187,57 +232,41 @@ export function PlaygroundRoot() {
           />
 
           <div className="shrink-0 border-t border-edge bg-surface">
-            <div className="flex items-center gap-2 overflow-x-auto px-3 py-1.5">
-              <SegmentedControl
-                label="Editor"
-                options={EDITORS}
-                value={editor === "clip" ? "pattern" : editor}
-                size="sm"
-                onChange={setEditor}
-              />
-              <HelpTip term="pianoRoll" placement="top" />
-              <div className="h-4 w-px bg-edge" aria-hidden />
-              <select
-                value={activePatternId ?? ""}
-                aria-label={strings.playground.editors.pattern}
-                onChange={(e) => setActivePatternId(e.target.value || null)}
-                className="material-sunken motion-ui rounded-[var(--radius-control)] px-2 py-1 text-[11px] text-ink outline-none focus:shadow-[var(--halo)]"
-              >
-                <option value="">{strings.playground.pattern.select}</option>
-                {patterns.map((pattern) => (
-                  <option key={pattern.id} value={pattern.id}>
-                    {pattern.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                size="sm"
-                icon={<MusicNotes size={13} weight="bold" />}
-                onClick={() => setActivePatternId(addPattern(4, 4))}
-              >
-                {strings.playground.pattern.newPattern}
-              </Button>
-              <HelpTip term="pattern" placement="top" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className={libraryActive ? "text-accent-ink" : undefined}
-                onClick={toggleLibrary}
-              >
-                {strings.library.title}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={bottomPanel === "editor" ? <CaretDown size={13} /> : <CaretUp size={13} />}
-                onClick={() => setBottomPanel(bottomPanel === "editor" ? "closed" : "editor")}
-              >
-                {bottomPanel === "editor" ? strings.common.close : strings.playground.editors.pattern}
-              </Button>
+            {/* The patterns themselves, always visible — even with the editor
+                closed, so the arrangement can be built from the cards. */}
+            <div className="flex items-center gap-2 px-3">
+              <PatternStrip onCreatePattern={createPattern} />
+
+              <div className="flex shrink-0 items-center gap-2 pl-2">
+                <SegmentedControl
+                  label={strings.playground.editors.pattern}
+                  options={EDITORS}
+                  value={editor}
+                  size="sm"
+                  onChange={(value) => {
+                    setEditor(value);
+                    setBottomPanel("editor");
+                  }}
+                />
+                <HelpTip term="pianoRoll" placement="top" />
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label={
+                    bottomPanel === "editor"
+                      ? strings.common.close
+                      : strings.playground.editors.pattern
+                  }
+                  icon={
+                    bottomPanel === "editor" ? <CaretDown size={14} /> : <CaretUp size={14} />
+                  }
+                  onClick={() => setBottomPanel(bottomPanel === "editor" ? "closed" : "editor")}
+                />
+              </div>
             </div>
 
             {bottomPanel === "editor" && (
-              <div className="h-[280px] border-t border-edge bg-base">
+              <div style={{ height: EDITOR_HEIGHT }} className="border-t border-edge bg-base">
                 {editor === "piano-roll" ? (
                   <PianoRoll patternId={activePatternId} />
                 ) : (

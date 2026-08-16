@@ -6,13 +6,19 @@
  * Create, move, resize, delete, multi-select, quantize and velocity editing
  * all write through the project store, so any change appears immediately in
  * the Pattern Editor and vice versa.
+ *
+ * Auditioning a note plays it through the instrument of the track this
+ * pattern is placed on — the same rule the Pattern Editor follows — so the
+ * two editors never disagree about what the pattern sounds like.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, SegmentedControl } from "@/components/controls";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
-import { useEngineRef } from "@/components/hooks/useEngine";
 import { noteToName, quantizeBeat } from "@/lib/music/theory";
+import { PatternTargetChip } from "./PatternTargetChip";
+import { usePatternTarget } from "./patternTarget";
+import { useTrackPreview } from "./useTrackPreview";
 import { strings } from "@/i18n";
 import type { NoteEvent } from "@/lib/schema/types";
 
@@ -39,6 +45,8 @@ interface DragState {
   originPitch: number;
   originDuration: number;
   moved: boolean;
+  /** Whether this drag has already put its starting state on the undo stack. */
+  undoPushed: boolean;
 }
 
 export function PianoRoll({ patternId }: { patternId: string | null }) {
@@ -51,7 +59,9 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
   const setSnap = useUiStore((s) => s.setPianoRollSnap);
   const setSelection = useUiStore((s) => s.setSelection);
   const positionBeats = useUiStore((s) => s.positionBeats);
-  const engineRef = useEngineRef();
+  const transportPlaying = useUiStore((s) => s.transportPlaying);
+  const target = usePatternTarget(patternId);
+  const trackPreview = useTrackPreview();
 
   const [pixelsPerBeat, setPixelsPerBeat] = useState(64);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -82,17 +92,17 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
     const focus = pitches.length
       ? pitches.reduce((sum, p) => sum + p, 0) / pitches.length
       : 60;
-    const target = (HIGH_NOTE - focus) * ROW_HEIGHT - grid.clientHeight / 2;
-    grid.scrollTop = Math.max(0, target);
+    const scrollTarget = (HIGH_NOTE - focus) * ROW_HEIGHT - grid.clientHeight / 2;
+    grid.scrollTop = Math.max(0, scrollTarget);
     syncKeys(grid.scrollTop);
   }, [pattern, syncKeys]);
 
+  const previewTrackId = target.active?.trackId;
   const preview = useCallback(
     (pitch: number, velocity = 100) => {
-      engineRef.current?.noteOn(pitch, velocity);
-      window.setTimeout(() => engineRef.current?.noteOff(pitch), 180);
+      trackPreview.note(previewTrackId, pitch, velocity);
     },
-    [engineRef],
+    [trackPreview, previewTrackId],
   );
 
   const onPointerMove = useCallback(
@@ -102,6 +112,10 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
       const deltaBeats = (event.clientX - state.startX) / pixelsPerBeat;
       const deltaRows = Math.round((event.clientY - state.startY) / ROW_HEIGHT);
       state.moved = true;
+      // One undo entry per gesture, as on the timeline: the first frame
+      // carries the note's starting position, the rest are silent.
+      const undoable = !state.undoPushed;
+      state.undoPushed = true;
 
       if (state.mode === "move") {
         const nextStart = Math.max(0, quantizeBeat(state.originStart + deltaBeats, snap));
@@ -113,12 +127,12 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
             note.startBeat = nextStart;
             note.pitch = nextPitch;
           },
-          { undoable: false },
+          { undoable },
         );
       } else {
         const nextDuration = Math.max(1 / snap, quantizeBeat(state.originDuration + deltaBeats, snap));
         updateNote(pattern.id, state.noteId, (note) => void (note.durationBeats = nextDuration), {
-          undoable: false,
+          undoable,
         });
       }
     },
@@ -130,6 +144,12 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
   }
 
   const totalBeats = Math.max(pattern.lengthBeats, 4);
+  /** Transport position folded into the pattern, via its clip's start. */
+  const clipStart =
+    target.track?.clips.find((clip) => clip.id === target.active?.clipId)?.startBeat ?? 0;
+  const patternBeat =
+    (((positionBeats - clipStart) % pattern.lengthBeats) + pattern.lengthBeats) %
+    pattern.lengthBeats;
 
   const beginDrag = (event: React.PointerEvent, note: NoteEvent, mode: DragMode) => {
     event.stopPropagation();
@@ -149,6 +169,7 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
       originPitch: note.pitch,
       originDuration: note.durationBeats,
       moved: false,
+      undoPushed: false,
     };
     setSelection({ kind: "note", patternId: pattern.id, noteId: note.id });
     setSelectedIds((current) =>
@@ -188,7 +209,7 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center gap-3 border-b border-edge px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-edge px-3 py-2">
         <SegmentedControl
           label="Snap"
           options={SNAP_OPTIONS}
@@ -210,6 +231,7 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
         </label>
         <Button
           size="sm"
+          className="whitespace-nowrap"
           disabled={selectedIds.length === 0}
           onClick={() => {
             for (const id of selectedIds) {
@@ -224,6 +246,7 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
         <Button
           size="sm"
           variant="danger"
+          className="whitespace-nowrap"
           disabled={selectedIds.length === 0}
           onClick={() => {
             deleteNotes(pattern.id, selectedIds);
@@ -233,9 +256,11 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
         >
           {strings.playground.inspector.deleteNote}
         </Button>
-        <span className="font-mono text-[10px] text-ink-faint">
-          {pattern.notes.length} notes
+        <span className="whitespace-nowrap font-mono text-[10px] text-ink-faint">
+          {pattern.notes.length} {strings.playground.pattern.notes}
         </span>
+        <span aria-hidden className="h-5 w-px bg-edge" />
+        <PatternTargetChip patternId={pattern.id} />
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -338,12 +363,17 @@ export function PianoRoll({ patternId }: { patternId: string | null }) {
               );
             })}
 
-            {/* Playhead */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 top-0 w-px bg-ink"
-              style={{ left: (positionBeats % totalBeats) * pixelsPerBeat }}
-            />
+            {/* Playhead, positioned inside the pattern: the clip's own start
+                on the timeline is what decides where in the pattern the
+                transport currently is. Hidden when stopped, where beat 0
+                would read as "playing the first note". */}
+            {transportPlaying && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-accent"
+                style={{ left: patternBeat * pixelsPerBeat }}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -208,3 +208,94 @@ describe("tracks", () => {
     expect(useProjectStore.getState().project.tracks[0].clips).toHaveLength(0);
   });
 });
+
+describe("moveClipToTrack", () => {
+  /** One instrument track holding a pattern clip, plus a second track. */
+  function twoTracks() {
+    const store = useProjectStore.getState();
+    const patternId = store.addPattern();
+    const from = store.addTrack("instrument");
+    const to = store.addTrack("instrument");
+    store.addClip(from, {
+      kind: "pattern",
+      id: "clip-1",
+      patternId,
+      startBeat: 4,
+      lengthBeats: 4,
+      loopEnabled: true,
+      transpose: 0,
+      velocityMultiplier: 1,
+    });
+    return { from, to, patternId };
+  }
+
+  it("moves a pattern clip to another instrument track, keeping its id", () => {
+    const { from, to } = twoTracks();
+    useProjectStore.getState().moveClipToTrack(from, to, "clip-1");
+    const tracks = useProjectStore.getState().project.tracks;
+    expect(tracks.find((t) => t.id === from)?.clips).toHaveLength(0);
+    expect(tracks.find((t) => t.id === to)?.clips.map((c) => c.id)).toEqual(["clip-1"]);
+    expect(tracks.find((t) => t.id === to)?.clips[0].startBeat).toBe(4);
+  });
+
+  it("refuses to drop a pattern clip on an audio track", () => {
+    const { from } = twoTracks();
+    const audio = useProjectStore.getState().addTrack("audio");
+    useProjectStore.getState().moveClipToTrack(from, audio, "clip-1");
+    const tracks = useProjectStore.getState().project.tracks;
+    expect(tracks.find((t) => t.id === from)?.clips).toHaveLength(1);
+    expect(tracks.find((t) => t.id === audio)?.clips).toHaveLength(0);
+  });
+
+  it("leaves the document untouched for the same track or an unknown clip", () => {
+    const { from, to } = twoTracks();
+    const before = useProjectStore.getState().project;
+    useProjectStore.getState().moveClipToTrack(from, from, "clip-1");
+    useProjectStore.getState().moveClipToTrack(from, to, "nope");
+    expect(useProjectStore.getState().project.tracks.find((t) => t.id === from)?.clips).toHaveLength(1);
+    expect(useProjectStore.getState().project.tracks.find((t) => t.id === to)?.clips).toHaveLength(0);
+    // Identity, not just contents: a rejected move must not bump updatedAt,
+    // mark the project dirty, or push an undo entry.
+    expect(useProjectStore.getState().project).toBe(before);
+  });
+
+  it("is one undoable step", () => {
+    const { from, to } = twoTracks();
+    useProjectStore.getState().moveClipToTrack(from, to, "clip-1");
+    useProjectStore.getState().undo();
+    const tracks = useProjectStore.getState().project.tracks;
+    expect(tracks.find((t) => t.id === from)?.clips).toHaveLength(1);
+    expect(tracks.find((t) => t.id === to)?.clips).toHaveLength(0);
+  });
+});
+
+describe("drag-rate updates coalesce into one undo step", () => {
+  it("keeps a single snapshot for a clip drag", () => {
+    const store = useProjectStore.getState();
+    const patternId = store.addPattern();
+    const trackId = store.addTrack("instrument");
+    store.addClip(trackId, {
+      kind: "pattern",
+      id: "clip-1",
+      patternId,
+      startBeat: 0,
+      lengthBeats: 4,
+      loopEnabled: true,
+      transpose: 0,
+      velocityMultiplier: 1,
+    });
+    const depth = useProjectStore.getState().past.length;
+
+    // One gesture: the first frame is undoable, the rest are not.
+    useProjectStore.getState().updateClip(trackId, "clip-1", (c) => void (c.startBeat = 1), { undoable: true });
+    for (const beat of [2, 3, 4, 5]) {
+      useProjectStore.getState().updateClip(trackId, "clip-1", (c) => void (c.startBeat = beat), {
+        undoable: false,
+      });
+    }
+    expect(useProjectStore.getState().past.length).toBe(depth + 1);
+
+    useProjectStore.getState().undo();
+    expect(useProjectStore.getState().project.tracks[0].clips[0].startBeat).toBe(0);
+  });
+});

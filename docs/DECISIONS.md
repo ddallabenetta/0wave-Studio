@@ -70,3 +70,38 @@ IndexedDB (via `idb`) is the system of record by default: projects as validated 
 **Status:** accepted (2026-08-12)
 
 Minimum usable width is 1024px. Below that the body scrolls horizontally (`min-width: 1024px`) instead of faking a mobile experience the product does not have.
+
+## ADR-011: A pattern's instrument is its placement
+
+**Status:** accepted (2026-08-16)
+
+A `Pattern` holds notes and nothing else. The instrument it is heard through is
+derived from the arrangement — the clip that plays it, that clip's track, that
+track's `soundId` — and never stored on the pattern or chosen in a note editor.
+`components/playground/patternTarget.ts` is the single resolver (selected clip →
+selected track → first placement); the editors display the answer and audition
+with it, and dragging a clip to another lane is the whole gesture for changing
+instrument.
+
+Consequences: a pattern created from the Playground is placed as it is created,
+so it always has an instrument; an unplaced pattern is honestly reported as
+silent rather than being auditioned with an arbitrary sound; and the same
+pattern placed on two tracks is two voices of one idea, with the editors
+following whichever placement is selected.
+
+## ADR-012: Auditions play on the track's engine, not the preview engine
+
+**Status:** accepted (2026-08-16)
+
+Playground previews (a step, a note, a pattern card) go through
+`previewTrackNotes` on the track's own sound engine and bus, not through the
+Studio preview pair. Scheduling reuses the transport's model — a 25 ms tick
+handing notes to the voice with exact context times inside a 120 ms lookahead —
+so auditions layer over a running arrangement, obey the track's mix, and can be
+cancelled by dropping their queued notes without silencing anything already
+sounding.
+
+Consequences: an audition is silent when the track has no sound, which the UI
+states rather than hides; and the synth voice pool grows on demand (8 → 32 per
+engine) so layering an audition over playback adds voices instead of stealing
+them.

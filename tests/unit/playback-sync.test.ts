@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flattenTrackNotes } from "@/components/playground/usePlaybackSync";
+import { audioClipSignature, flattenTrackNotes } from "@/components/playground/usePlaybackSync";
 import { createEmptyProject, createPattern, createTrack } from "@/lib/schema/factories";
 import type { PatternClip, Project, Track } from "@/lib/schema/types";
 
@@ -99,5 +99,64 @@ describe("flattenTrackNotes", () => {
       loopEnd: 1,
     });
     expect(flattenTrackNotes(project, track)).toEqual([]);
+  });
+});
+
+describe("audioClipSignature", () => {
+  function projectWithAudioClip(): Project {
+    const project = createEmptyProject();
+    const track = createTrack("Audio", "audio");
+    track.id = "track-audio";
+    track.clips.push({
+      kind: "audio",
+      id: "clip-audio",
+      assetId: "asset-1",
+      startBeat: 0,
+      lengthBeats: 8,
+      offsetSeconds: 0,
+      gain: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      loopEnabled: false,
+      loopStart: 0,
+      loopEnd: 2,
+    });
+    project.tracks.push(track);
+    return project;
+  }
+
+  it("is stable across changes that do not affect audio clips", () => {
+    const project = projectWithAudioClip();
+    const before = audioClipSignature(project);
+    // A fader move, a mute, a note edit: none of these may restart a clip.
+    project.tracks[0].volume = 0.2;
+    project.tracks[0].mute = true;
+    project.name = "Renamed";
+    expect(audioClipSignature(project)).toBe(before);
+  });
+
+  it("changes when a clip is moved", () => {
+    const project = projectWithAudioClip();
+    const before = audioClipSignature(project);
+    const clip = project.tracks[0].clips[0];
+    if (clip.kind === "audio") clip.startBeat = 4;
+    expect(audioClipSignature(project)).not.toBe(before);
+  });
+
+  it("changes with tempo and loop range, which move clips in time", () => {
+    const project = projectWithAudioClip();
+    const before = audioClipSignature(project);
+    project.tempo = 140;
+    const afterTempo = audioClipSignature(project);
+    expect(afterTempo).not.toBe(before);
+    project.loopRange = { enabled: true, startBeat: 0, endBeat: 16 };
+    expect(audioClipSignature(project)).not.toBe(afterTempo);
+  });
+
+  it("ignores pattern clips entirely", () => {
+    const { project } = projectWithClip();
+    expect(audioClipSignature(project)).toBe(
+      audioClipSignature({ ...project, tracks: [] } as Project),
+    );
   });
 });

@@ -16,6 +16,8 @@ import { AudioClipPlayer } from "./audioClips";
 import type { AudioClipPlayback } from "./audioClips";
 import { InputMonitor } from "./input";
 import { MasterBus } from "./master";
+import { PreviewScheduler } from "./preview";
+import type { PreviewNote } from "./preview";
 import { SamplerEngine } from "./sampler";
 import { SynthEngine } from "./synth";
 import { TrackBus, TransportEngine } from "./transport";
@@ -39,6 +41,7 @@ class AudioEngine implements IAudioEngine {
   private analyzer: Analyzer | null = null;
   private transport: TransportEngine | null = null;
   private clipPlayer: AudioClipPlayer | null = null;
+  private preview: PreviewScheduler | null = null;
   private studioSynth: SynthEngine | null = null;
   private studioSampler: SamplerEngine | null = null;
   private activeSound: SoundDefinition | null = null;
@@ -104,6 +107,7 @@ class AudioEngine implements IAudioEngine {
         (trackId) => this.resolveTrackVoice(trackId),
       );
       this.clipPlayer = new AudioClipPlayer(ctx);
+      this.preview = new PreviewScheduler(ctx, (trackId) => this.resolveTrackVoice(trackId));
       this.statechangeHandler = () => this.onContextStateChange();
       ctx.addEventListener("statechange", this.statechangeHandler);
       await ctx.resume();
@@ -196,6 +200,7 @@ class AudioEngine implements IAudioEngine {
     const track = this.tracks.get(trackId);
     if (!track) return;
     this.transport?.removeTrack(trackId);
+    this.preview?.stop(trackId);
     track.sound?.dispose();
     track.bus.dispose();
     this.tracks.delete(trackId);
@@ -205,6 +210,9 @@ class AudioEngine implements IAudioEngine {
   assignSoundToTrack(trackId: ID, sound: SoundDefinition | null): void {
     const track = this.tracks.get(trackId);
     if (!track || !this.ctx) return;
+    // The engine about to be disposed is the one any running audition is
+    // playing through, so the audition goes with it.
+    this.preview?.stop(trackId);
     track.sound?.dispose();
     track.sound = null;
     if (!sound) return;
@@ -239,6 +247,26 @@ class AudioEngine implements IAudioEngine {
   /** Per-track effects (same deterministic order); not on the frozen interface. */
   setTrackEffects(trackId: ID, effects: EffectState[]): void {
     this.tracks.get(trackId)?.bus.setEffects(effects);
+  }
+
+  trackHasSound(trackId: ID): boolean {
+    return Boolean(this.tracks.get(trackId)?.sound);
+  }
+
+  /* ------------------------------ Preview ------------------------------ */
+
+  /**
+   * Audition notes on a track's own instrument. It goes through that track's
+   * bus, so its volume, pan, mute, solo and effects all apply, and it layers
+   * over a running transport instead of interrupting it.
+   */
+  previewTrackNotes(trackId: ID, notes: PreviewNote[], tempo?: number): number | null {
+    if (this.disposed || !this.preview) return null;
+    return this.preview.start(trackId, notes, tempo ?? this.tempo);
+  }
+
+  stopTrackPreview(trackId?: ID): void {
+    this.preview?.stop(trackId);
   }
 
   private applySoloContext(): void {
@@ -287,6 +315,7 @@ class AudioEngine implements IAudioEngine {
 
   cancelScheduled(): void {
     this.transport?.cancelScheduled();
+    this.preview?.stop();
     this.clipPlayer?.cancelAll();
     for (const track of this.tracks.values()) track.sound?.allNotesOff();
   }
@@ -304,6 +333,7 @@ class AudioEngine implements IAudioEngine {
 
   stopTransport(): void {
     this.transport?.stop();
+    this.preview?.stop();
     this.clipPlayer?.cancelAll();
     for (const track of this.tracks.values()) track.sound?.allNotesOff();
   }
@@ -385,6 +415,7 @@ class AudioEngine implements IAudioEngine {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.preview?.dispose();
     this.transport?.dispose();
     for (const track of this.tracks.values()) {
       track.sound?.dispose();
@@ -410,6 +441,8 @@ class AudioEngine implements IAudioEngine {
     this.analyzer = null;
     this.clipPlayer?.dispose();
     this.clipPlayer = null;
+    this.preview?.dispose();
+    this.preview = null;
     this.transport = null;
     this.studioSynth = null;
     this.studioSampler = null;

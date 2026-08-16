@@ -11,7 +11,7 @@ dynamic-imports the implementation so nothing touches Web Audio during SSR.
 |---|---|
 | `engine.ts` | `createAudioEngine()`, AudioContext lifecycle, track registry, facade for every `IAudioEngine` method |
 | `master.ts` | master gain, `DynamicsCompressor` limiter, scope + spectrum analysers, clip detection |
-| `synth.ts` | 8-voice polyphonic synth: oscillators (with unison), noise, mixer, filter, amp/filter envelopes, LFO |
+| `synth.ts` | Polyphonic synth (pool of 8 growing to 32 voices): oscillators (with unison), noise, mixer, filter, amp/filter envelopes, LFO |
 | `sampler.ts` | sample playback honoring `SampleState` (trim, fades, gain, reverse, loop points, root note, tuning) |
 | `effects.ts` | effect chain in `EFFECT_ORDER`: distortion, chorus, delay, reverb |
 | `transport.ts` | lookahead scheduler, `PatternScheduler`, `TrackBus`, metronome, loop range, swing |
@@ -50,6 +50,15 @@ Studio preview (keyboard, library auditions) runs through a dedicated synth and
 sampler pair connected straight to the master bus, so previewing never disturbs
 arrangement tracks.
 
+Playground auditions are the opposite case and take the opposite route:
+`previewTrackNotes(trackId, notes)` plays them on the track's *own* engine, so a
+step, a note or a whole pattern is heard through the instrument the arrangement
+will actually use, mixed through that track's fader, pan and effects.
+`preview.ts` schedules them the way the transport does — a 25 ms tick handing
+notes to the voice with exact context times inside a 120 ms lookahead — so an
+audition can be cancelled (its queued notes are dropped) without silencing
+anything already sounding.
+
 ## Parameter updates
 
 `setParameter(path, value)` takes dot paths into `SynthState`
@@ -60,9 +69,15 @@ state, and no React render happens per audio frame.
 
 ## Voice management
 
-Eight voices. Allocation prefers a free slot, then the oldest released voice,
-then the oldest voice overall, so stealing is predictable. Every voice releases
-its envelope on note-off and disposes its nodes after the release tail.
+Per sound engine — and every track has its own — the pool starts at 8 slots and
+grows on demand to 32. Allocation prefers a free slot, then a new slot while the
+pool is below its ceiling, then a retrigger of the same note, then the oldest
+released voice, then the oldest voice overall. Voices are therefore only stolen
+once a single instrument is genuinely playing 32 notes at once: a chord over a
+ringing pad, a fast roll with a long release, and an audition layered over a
+running arrangement all add voices instead of cutting one another off. Every
+voice releases its envelope on note-off and disposes its nodes after the release
+tail.
 
 ## Robustness notes
 
