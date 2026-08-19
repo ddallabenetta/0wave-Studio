@@ -1,12 +1,18 @@
 /**
- * Polyphonic subtractive synth: 8-voice pool, two detunable oscillators with
- * per-oscillator unison, a looping noise source (white/pink), mixer, one
- * state-variable filter with its own ADSR envelope, amp ADSR, one LFO
- * routable to pitch / filter / amplitude, and a per-sound effects chain.
+ * Polyphonic subtractive synth: a growing voice pool, two detunable
+ * oscillators with per-oscillator unison, a looping noise source
+ * (white/pink), mixer, one state-variable filter with its own ADSR envelope,
+ * amp ADSR, one LFO routable to pitch / filter / amplitude, and a per-sound
+ * effects chain.
+ *
+ * The pool starts at 8 slots and grows on demand up to MAX_VOICES: a chord
+ * over a still-ringing pad, or a roll of hits with a long release, adds
+ * voices instead of cutting the ones already sounding. Voices are only stolen
+ * once the pool is at its ceiling — oldest released first, then oldest
+ * active.
  *
  * Voices are built fresh per note (so waveform/mode changes are applied on
  * the next note without clicks) and torn down release+50 ms after note-off.
- * Voice stealing: oldest released voice first, else the oldest active one.
  */
 import { beatsToSeconds, clamp, noteToFrequency, velocityToGain } from "../music/theory";
 import { defaultSynthState } from "../schema/factories";
@@ -16,6 +22,15 @@ import { EffectsChain } from "./effects";
 
 /** Fade-in time constant for freshly built oscillators/noise (10 ms-ish). */
 const SOURCE_FADE_TC = 0.004;
+/** Slots allocated up front; enough for ordinary playing with no churn. */
+const INITIAL_VOICES = 8;
+/**
+ * Ceiling of the pool. Per sound engine, and every track has its own, so the
+ * limit that matters in practice is the browser's audio thread rather than
+ * this number; it exists to stop a runaway pattern from allocating without
+ * bound, not to cap normal playing.
+ */
+const MAX_VOICES = 32;
 /** Release + slack before a released voice is disposed. */
 const RELEASE_SLACK = 0.05;
 /** Parameter smoothing time constant for live voice updates. */
@@ -462,8 +477,9 @@ export class SynthVoice {
 }
 
 /**
- * The 8-voice synth. Output is a single GainNode the caller connects into a
- * master input or a track bus.
+ * The polyphonic synth. Output is a single GainNode the caller connects into
+ * a master input or a track bus. One instance per track (and one for the
+ * Studio preview), each with its own growing voice pool.
  */
 export class SynthEngine {
   /** Post-effects output; connect this into a master input or track bus. */
@@ -493,7 +509,7 @@ export class SynthEngine {
     this.effects.output.connect(this.outputGain);
     this.outputGain.connect(this.output);
     this.output.connect(destination);
-    for (let i = 0; i < 8; i++) this.slots.push({ voice: null });
+    for (let i = 0; i < INITIAL_VOICES; i++) this.slots.push({ voice: null });
   }
 
   /**
@@ -565,7 +581,14 @@ export class SynthEngine {
   private allocateSlot(note: number, time: number): VoiceSlot | null {
     // 1. Free slot.
     for (const slot of this.slots) if (!slot.voice) return slot;
-    // 2. Same note still ringing -> retrigger.
+    // 2. Room to grow: another simultaneous note costs a slot, not a voice
+    //    that is still sounding.
+    if (this.slots.length < MAX_VOICES) {
+      const slot: VoiceSlot = { voice: null };
+      this.slots.push(slot);
+      return slot;
+    }
+    // 3. Same note still ringing -> retrigger.
     for (const slot of this.slots) {
       const voice = slot.voice;
       if (voice && !voice.released && voice.note === note) {
@@ -574,7 +597,7 @@ export class SynthEngine {
         return slot;
       }
     }
-    // 3. Oldest released voice.
+    // 4. Oldest released voice.
     let released: VoiceSlot | null = null;
     for (const slot of this.slots) {
       const voice = slot.voice;
@@ -582,7 +605,7 @@ export class SynthEngine {
       if (!released || !released.voice || voice.releaseTime < released.voice.releaseTime) released = slot;
     }
     if (released) return released;
-    // 4. Oldest active voice.
+    // 5. Oldest active voice.
     let oldest: VoiceSlot | null = null;
     for (const slot of this.slots) {
       const voice = slot.voice;

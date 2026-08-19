@@ -10,6 +10,8 @@ import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
 import { noteToName } from "@/lib/music/theory";
 import { Panel } from "@/components/studio/Panel";
+import { PatternPreview } from "./PatternPreview";
+import { clipRepeats } from "./patternGeometry";
 import { strings } from "@/i18n";
 
 export function Inspector() {
@@ -156,10 +158,29 @@ export function Inspector() {
 
   if (clip.kind === "pattern") {
     const pattern = project.patterns.find((p) => p.id === clip.patternId);
+    const sound = project.sounds.find((s) => s.id === track.soundId);
     return (
       <Panel title={strings.playground.inspector.patternClip}>
         <div className="flex flex-col gap-3 p-3">
+          {/* The clip's own notes, at the repetition count it will play. */}
+          <PatternPreview
+            pattern={pattern}
+            color={`var(--${track.colorToken})`}
+            repeats={clipRepeats(clip.lengthBeats, pattern?.lengthBeats ?? 4, clip.loopEnabled)}
+            className="h-12 w-full rounded-[var(--radius-control)] bg-surface-sunken text-ink-faint"
+          />
           <p className="font-mono text-[11px] text-ink-soft">{pattern?.name}</p>
+          {/* What it will be heard through — a fact of the arrangement, not
+              a setting of the pattern. */}
+          <p className="flex items-center gap-1.5 truncate font-mono text-[10px] text-ink-faint">
+            <span
+              aria-hidden
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: `var(--${track.colorToken})` }}
+            />
+            {strings.playground.pattern.playsOn} {track.name}
+            {sound ? ` · ${sound.name}` : ` · ${strings.playground.tracks.noSound}`}
+          </p>
           <div className="flex flex-wrap gap-3">
             <Knob
               label={strings.playground.inspector.start}

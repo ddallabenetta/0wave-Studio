@@ -4,14 +4,20 @@
  * Track list with the essential mixer: sound assignment, volume, pan, mute,
  * solo, and a direct route back into the Studio for deep sound editing.
  *
+ * A row is two lines: who this is (colour, name, mute/solo) and how it sits
+ * in the mix (sound, volume, pan). Everything else — reorder, duplicate,
+ * delete, edit in Studio — lives behind one menu, because seven icon buttons
+ * per row made the panel unreadable and pushed the sound selector down to a
+ * width where its names were truncated to nothing.
+ *
  * Rows line up with the timeline's lanes: same row height, a spacer standing
  * in for the timeline's bar ruler, and a scroll position mirrored by the
  * Playground so the two never drift apart.
  */
 import type { RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Copy, Trash, ArrowUp, ArrowDown, PencilSimple } from "@phosphor-icons/react";
-import { Button, Fader, IconButton } from "@/components/controls";
+import { Plus, Copy, Trash, ArrowUp, ArrowDown, PencilSimple, DotsThree } from "@phosphor-icons/react";
+import { Button, Fader, MenuButton } from "@/components/controls";
 import { HelpTip } from "@/components/guide/HelpTip";
 import { useProjectStore } from "@/lib/state/project-store";
 import { useUiStore } from "@/lib/state/ui-store";
@@ -54,16 +60,24 @@ export function TrackList({
 
   return (
     <div className="flex h-full flex-col border-r border-edge bg-surface">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-edge px-2">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-edge px-2">
         <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-faint">
           {strings.playground.inspector.track}
           <HelpTip term="track" placement="bottom" />
         </span>
         <div className="flex gap-1">
-          <Button size="sm" icon={<Plus size={12} weight="bold" />} onClick={() => addTrack("instrument")}>
+          <Button
+            size="sm"
+            icon={<Plus size={12} weight="bold" />}
+            onClick={() => setSelection({ kind: "track", trackId: addTrack("instrument") })}
+          >
             {strings.playground.tracks.addInstrument}
           </Button>
-          <Button size="sm" onClick={() => addTrack("audio")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelection({ kind: "track", trackId: addTrack("audio") })}
+          >
             {strings.playground.tracks.addAudio}
           </Button>
         </div>
@@ -85,6 +99,7 @@ export function TrackList({
         )}
         {tracks.map((track, index) => {
           const selected = selection?.kind === "track" && selection.trackId === track.id;
+          const sound = sounds.find((s) => s.id === track.soundId);
           return (
             <li
               key={track.id}
@@ -108,8 +123,6 @@ export function TrackList({
                 }}
               />
 
-              {/* Two lines: identity and actions on top, mix below, so the
-                  sound selector stays wide enough to read. */}
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
                 <div className="flex min-w-0 items-center gap-1">
                   {renamingId === track.id ? (
@@ -159,57 +172,67 @@ export function TrackList({
                   >
                     S
                   </button>
-                  <IconButton
-                    aria-label={strings.studio.editInStudio}
-                    size="sm"
-                    variant="ghost"
-                    icon={<PencilSimple size={11} />}
-                    disabled={!track.soundId}
-                    onClick={() => editInStudio(track.soundId)}
-                  />
-                  <IconButton
-                    aria-label={strings.playground.tracks.duplicateTrack}
-                    size="sm"
-                    variant="ghost"
-                    icon={<Copy size={11} />}
-                    onClick={() => duplicateTrack(track.id)}
-                  />
-                  <IconButton
-                    aria-label={strings.playground.tracks.moveUp}
-                    size="sm"
-                    variant="ghost"
-                    icon={<ArrowUp size={11} />}
-                    disabled={index === 0}
-                    onClick={() => reorderTracks(index, index - 1)}
-                  />
-                  <IconButton
-                    aria-label={strings.playground.tracks.moveDown}
-                    size="sm"
-                    variant="ghost"
-                    icon={<ArrowDown size={11} />}
-                    disabled={index === tracks.length - 1}
-                    onClick={() => reorderTracks(index, index + 1)}
-                  />
-                  <IconButton
-                    aria-label={strings.playground.tracks.deleteTrack}
-                    size="sm"
-                    variant="ghost"
-                    icon={<Trash size={11} />}
-                    onClick={() => deleteTrack(track.id)}
+
+                  <MenuButton
+                    label={`${strings.playground.tracks.more}: ${track.name}`}
+                    icon={<DotsThree size={15} weight="bold" />}
+                    actions={[
+                      {
+                        id: "edit",
+                        label: strings.studio.editInStudio,
+                        icon: <PencilSimple size={13} />,
+                        disabled: !track.soundId,
+                        title: track.soundId ? undefined : strings.playground.tracks.noSound,
+                        onSelect: () => editInStudio(track.soundId),
+                      },
+                      {
+                        id: "duplicate",
+                        label: strings.playground.tracks.duplicateTrack,
+                        icon: <Copy size={13} />,
+                        onSelect: () => duplicateTrack(track.id),
+                      },
+                      {
+                        id: "up",
+                        label: strings.playground.tracks.moveUp,
+                        icon: <ArrowUp size={13} />,
+                        disabled: index === 0,
+                        onSelect: () => reorderTracks(index, index - 1),
+                      },
+                      {
+                        id: "down",
+                        label: strings.playground.tracks.moveDown,
+                        icon: <ArrowDown size={13} />,
+                        disabled: index === tracks.length - 1,
+                        onSelect: () => reorderTracks(index, index + 1),
+                      },
+                      {
+                        id: "delete",
+                        label: strings.playground.tracks.deleteTrack,
+                        icon: <Trash size={13} />,
+                        danger: true,
+                        onSelect: () => {
+                          deleteTrack(track.id);
+                          setSelection(null);
+                        },
+                      },
+                    ]}
                   />
                 </div>
 
                 <div className="flex min-w-0 items-center gap-2">
                   <select
                     value={track.soundId ?? ""}
-                    aria-label={strings.playground.tracks.assignSound}
+                    aria-label={`${strings.playground.tracks.assignSound}: ${track.name}`}
+                    title={sound ? sound.name : strings.playground.tracks.noSound}
                     onChange={(e) => assignSoundToTrack(track.id, e.target.value || null)}
-                    className="material-sunken min-w-0 flex-1 rounded-[var(--radius-control)] px-1 py-0.5 text-[11px] text-ink outline-none"
+                    className={`material-sunken min-w-0 flex-1 rounded-[var(--radius-control)] px-1 py-0.5 text-[11px] outline-none ${
+                      sound ? "text-ink" : "text-ink-faint"
+                    }`}
                   >
                     <option value="">{strings.playground.tracks.noSound}</option>
-                    {sounds.map((sound) => (
-                      <option key={sound.id} value={sound.id}>
-                        {sound.name}
+                    {sounds.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
                       </option>
                     ))}
                   </select>

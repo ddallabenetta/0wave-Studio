@@ -70,7 +70,7 @@ interface ProjectStoreState {
 
   /* Tracks */
   addTrack(type?: Track["type"], soundId?: ID): ID;
-  updateTrack(id: ID, recipe: (track: Track) => void): void;
+  updateTrack(id: ID, recipe: (track: Track) => void, options?: { undoable?: boolean }): void;
   renameTrack(id: ID, name: string): void;
   duplicateTrack(id: ID): ID | null;
   deleteTrack(id: ID): void;
@@ -92,9 +92,20 @@ interface ProjectStoreState {
 
   /* Clips */
   addClip(trackId: ID, clip: Clip): void;
-  updateClip(trackId: ID, clipId: ID, recipe: (clip: Clip) => void): void;
+  /**
+   * `undoable: false` is for the frames of a drag: the first frame carries
+   * the undo snapshot (the clip where it started), the rest do not, so one
+   * Undo puts the clip back rather than replaying the gesture.
+   */
+  updateClip(trackId: ID, clipId: ID, recipe: (clip: Clip) => void, options?: { undoable?: boolean }): void;
   deleteClip(trackId: ID, clipId: ID): void;
   duplicateClip(trackId: ID, clipId: ID): ID | null;
+  /**
+   * Move a clip to another track, keeping its id. This is how a pattern
+   * changes instrument: the clip decides which track plays it, so dragging
+   * it onto the bass lane is the whole gesture.
+   */
+  moveClipToTrack(fromTrackId: ID, toTrackId: ID, clipId: ID, options?: { undoable?: boolean }): void;
 
   /* Audio assets (metadata only; blobs live in the persistence layer) */
   addAsset(asset: AudioAsset): void;
@@ -249,11 +260,11 @@ export const useProjectStore = create<ProjectStoreState>()((set, get) => {
       });
       return id;
     },
-    updateTrack(id, recipe) {
+    updateTrack(id, recipe, options) {
       mutate((p) => {
         const track = p.tracks.find((t) => t.id === id);
         if (track) recipe(track);
-      });
+      }, options);
     },
     renameTrack(id, name) {
       get().updateTrack(id, (t) => void (t.name = name.slice(0, 80) || t.name));
@@ -357,16 +368,45 @@ export const useProjectStore = create<ProjectStoreState>()((set, get) => {
     addClip(trackId, clip) {
       get().updateTrack(trackId, (t) => void t.clips.push(clip));
     },
-    updateClip(trackId, clipId, recipe) {
-      get().updateTrack(trackId, (t) => {
-        const clip = t.clips.find((c) => c.id === clipId);
-        if (clip) recipe(clip);
-      });
+    updateClip(trackId, clipId, recipe, options) {
+      get().updateTrack(
+        trackId,
+        (t) => {
+          const clip = t.clips.find((c) => c.id === clipId);
+          if (clip) recipe(clip);
+        },
+        options,
+      );
     },
     deleteClip(trackId, clipId) {
       get().updateTrack(trackId, (t) => {
         t.clips = t.clips.filter((c) => c.id !== clipId);
       });
+    },
+    moveClipToTrack(fromTrackId, toTrackId, clipId, options) {
+      if (fromTrackId === toTrackId) return;
+      // Checked before mutating: a move that cannot happen must not bump
+      // project.updatedAt or push an undo entry (mutate() touches the project
+      // unconditionally). A clip drag asks for this on every frame it spends
+      // over a lane it cannot land on.
+      const { project } = get();
+      const from = project.tracks.find((t) => t.id === fromTrackId);
+      const to = project.tracks.find((t) => t.id === toTrackId);
+      const clip = from?.clips.find((c) => c.id === clipId);
+      if (!from || !to || !clip) return;
+      // An audio clip on an instrument track (or the reverse) would never
+      // sound: the two lane kinds play through different paths.
+      if (to.type === "instrument" && clip.kind !== "pattern") return;
+      if (to.type === "audio" && clip.kind !== "audio") return;
+
+      mutate((p) => {
+        const source = p.tracks.find((t) => t.id === fromTrackId);
+        const target = p.tracks.find((t) => t.id === toTrackId);
+        const moving = source?.clips.find((c) => c.id === clipId);
+        if (!source || !target || !moving) return;
+        source.clips = source.clips.filter((c) => c.id !== clipId);
+        target.clips.push(moving);
+      }, options);
     },
     duplicateClip(trackId, clipId) {
       const track = get().project.tracks.find((t) => t.id === trackId);

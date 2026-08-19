@@ -3,6 +3,14 @@
 /**
  * Global transport. The playhead position comes from the engine through the
  * UI store (display rate), never from a React timer.
+ *
+ * The bar is read left to right in the order the controls are reached for:
+ * move the playhead, read where you are, set the pulse, then the two things
+ * that repeat (click and loop). Each group is separated by a hairline rather
+ * than by spacing alone, so the row scans as four things instead of nine.
+ *
+ * The loop is expressed the way a musician says it — "from bar 2, four bars"
+ * — while the project keeps storing beats.
  */
 import { Play, Pause, Stop, SkipBack } from "@phosphor-icons/react";
 import { Display, IconButton, Knob, Toggle } from "@/components/controls";
@@ -13,6 +21,11 @@ import { useUiStore } from "@/lib/state/ui-store";
 import { formatPosition } from "@/lib/music/theory";
 import { strings } from "@/i18n";
 import { useState } from "react";
+import { useTransportControls } from "./useTransportControls";
+
+function Divider() {
+  return <span aria-hidden className="h-6 w-px shrink-0 bg-edge" />;
+}
 
 export function Transport() {
   const engineRef = useEngineRef();
@@ -25,35 +38,34 @@ export function Transport() {
   const beatsPerBar = useProjectStore((s) => s.project.timeSignature.beatsPerBar);
 
   const playing = useUiStore((s) => s.transportPlaying);
-  const setPlaying = useUiStore((s) => s.setTransportPlaying);
   const position = useUiStore((s) => s.positionBeats);
-  const audioStatus = useUiStore((s) => s.audioStatus);
   const [metronome, setMetronome] = useState(false);
 
-  const disabled = audioStatus !== "running";
+  const { play, pause, stop, toStart, ready } = useTransportControls();
+  const disabled = !ready;
 
-  const play = () => {
-    engineRef.current?.startTransport();
-    setPlaying(true);
-  };
-  const pause = () => {
-    engineRef.current?.pauseTransport();
-    setPlaying(false);
-  };
-  const stop = () => {
-    engineRef.current?.stopTransport();
-    setPlaying(false);
-  };
-  const toStart = () => {
-    engineRef.current?.seek(0);
-    useUiStore.getState().setPositionBeats(0);
+  /* Loop bounds are stored in beats and shown in bars: "from bar 2, 4 bars". */
+  const loopStartBar = Math.max(1, Math.round(loopRange.startBeat / beatsPerBar) + 1);
+  const loopLengthBars = Math.max(
+    1,
+    Math.round((loopRange.endBeat - loopRange.startBeat) / beatsPerBar),
+  );
+  const applyLoop = (startBar: number, lengthBars: number) => {
+    const startBeat = Math.max(0, (Math.max(1, startBar) - 1) * beatsPerBar);
+    const next = {
+      ...loopRange,
+      startBeat,
+      endBeat: startBeat + Math.max(1, lengthBars) * beatsPerBar,
+    };
+    setLoopRange(next);
+    engineRef.current?.setLoopRange(next);
   };
 
   const numberFieldClass =
-    "material-sunken motion-ui w-14 rounded-[var(--radius-control)] px-1 py-1 text-center font-mono text-xs text-ink outline-none focus:shadow-[var(--halo)]";
+    "material-sunken motion-ui w-12 rounded-[var(--radius-control)] px-1 py-1 text-center font-mono text-xs text-ink outline-none focus:shadow-[var(--halo)]";
 
   return (
-    <div className="relative flex items-center gap-3 border-b border-edge bg-surface px-3 py-2">
+    <div className="relative flex items-center gap-3 overflow-x-auto border-b border-edge bg-surface px-3 py-2">
       {/* A thread of accent light along the bar while the transport runs:
           the one piece of chrome that has to be readable from across the
           room. Driven by real transport state, not a timer. */}
@@ -73,6 +85,7 @@ export function Transport() {
         {playing ? (
           <IconButton
             aria-label={strings.playground.transport.pause}
+            title={`${strings.playground.transport.pause} — ${strings.playground.transport.spaceHint}`}
             icon={<Pause size={15} weight="fill" />}
             onClick={pause}
             disabled={disabled}
@@ -80,6 +93,7 @@ export function Transport() {
         ) : (
           <IconButton
             aria-label={strings.playground.transport.play}
+            title={`${strings.playground.transport.play} — ${strings.playground.transport.spaceHint}`}
             icon={<Play size={15} weight="fill" />}
             variant="primary"
             onClick={play}
@@ -105,6 +119,8 @@ export function Transport() {
           </span>
         )}
       </div>
+
+      <Divider />
 
       {/* Tempo is labelled in plain words with the unit kept beside it, so
           the number stays meaningful to somebody who has never said "BPM". */}
@@ -149,6 +165,8 @@ export function Transport() {
         <HelpTip term="swing" placement="bottom" />
       </div>
 
+      <Divider />
+
       <div className="flex items-center gap-1">
         <Toggle
           checked={metronome}
@@ -174,42 +192,37 @@ export function Transport() {
           led={loopRange.enabled ? "on" : "off"}
         />
         <HelpTip term="loop" placement="bottom" />
-        {/* The two loop bounds were a pair of unlabelled number fields.
-            Naming them is the difference between an obvious control and a
-            guess. */}
+        {/* Bars, not beats: the loop is set the way it is counted in. */}
         <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
-          {strings.playground.transport.loopFrom}
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={loopRange.startBeat}
-            aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.start}`}
-            onChange={(e) => {
-              const next = { ...loopRange, startBeat: Math.max(0, Number(e.target.value)) };
-              setLoopRange(next);
-              engineRef.current?.setLoopRange(next);
-            }}
-            className={numberFieldClass}
-          />
-        </label>
-        <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
-          {strings.playground.transport.loopTo}
+          {strings.playground.transport.loopFromBar}
           <input
             type="number"
             min={1}
             step={1}
-            value={loopRange.endBeat}
-            aria-label={`${strings.playground.transport.loop} ${strings.playground.inspector.lengthBeats}`}
-            onChange={(e) => {
-              const next = { ...loopRange, endBeat: Math.max(1, Number(e.target.value)) };
-              setLoopRange(next);
-              engineRef.current?.setLoopRange(next);
-            }}
+            value={loopStartBar}
+            aria-label={`${strings.playground.transport.loop} ${strings.playground.transport.loopFromBar}`}
+            onChange={(e) => applyLoop(Number(e.target.value), loopLengthBars)}
+            className={numberFieldClass}
+          />
+        </label>
+        <label className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          {strings.playground.transport.loopBars}
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={loopLengthBars}
+            aria-label={`${strings.playground.transport.loop} ${strings.playground.transport.loopBars}`}
+            onChange={(e) => applyLoop(loopStartBar, Number(e.target.value))}
             className={numberFieldClass}
           />
         </label>
       </div>
+
+      {/* The one shortcut worth teaching in the chrome itself. */}
+      <span className="ml-auto shrink-0 pl-2 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+        {strings.playground.transport.spaceHint}
+      </span>
     </div>
   );
 }

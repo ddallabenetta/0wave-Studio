@@ -16,7 +16,7 @@ flowchart LR
   subgraph Engine[lib/audio - framework-free]
     AE[AudioEngine]
     TE[TransportEngine<br/>lookahead scheduler]
-    SE[SynthEngine<br/>8-voice pool]
+    SE[SynthEngine<br/>voice pool 8→32]
     SA[SamplerEngine]
     FX[EffectsChain]
     MB[MasterBus<br/>gain → limiter → analysers]

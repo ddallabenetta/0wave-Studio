@@ -11,7 +11,11 @@ import type { AudioEngineStatus } from "../schema/types";
  * from the library's "+" and left as soon as the new sound is saved.
  */
 export type StudioMode = "synth" | "record" | "import" | "sample";
-export type PlaygroundEditor = "pattern" | "piano-roll" | "clip";
+/**
+ * The two views over one pattern. There is no third "clip" editor: a clip's
+ * own parameters live in the Inspector, which follows the selection.
+ */
+export type PlaygroundEditor = "pattern" | "piano-roll";
 export type Complexity = "basic" | "advanced";
 export type BottomPanel = "editor" | "closed";
 /** Tabs of the Studio right-side panel (Analyzer + AI Sound Connector). */
